@@ -92,6 +92,11 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
 
+      .snapshot-section {
+        text-align: center;
+        margin: 20px 0;
+      }
+
       .snapshot-btn {
         background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         color: white;
@@ -101,7 +106,6 @@
         cursor: pointer;
         font-size: 16px;
         font-weight: 600;
-        margin-top: 15px;
         transition: transform 0.2s, box-shadow 0.2s;
       }
 
@@ -111,16 +115,45 @@
       }
 
       .controls {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
         margin: 30px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .control-inputs {
+        display: inline-grid;
+        grid-template-columns: repeat(2, auto);
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      @media (min-width: 768px) {
+        .control-inputs {
+          grid-template-columns: repeat(4, auto);
+        }
+      }
+
+      .control-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .buttons-row {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
       }
 
       .control-group {
         background: #f8f9ff;
         padding: 20px;
         border-radius: 8px;
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .control-group label {
@@ -128,6 +161,50 @@
         margin-bottom: 8px;
         color: #333;
         font-weight: 600;
+      }
+
+      .control-group label small {
+        font-weight: 400;
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .control-group select,
+      .control-group input[type='number'],
+      .control-group input[type='text'] {
+        text-align: center;
+      }
+
+      .time-input-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .time-input-group input {
+        flex: 1;
+      }
+
+      .time-set-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background 0.2s;
+        white-space: nowrap;
+      }
+
+      .time-set-btn:hover {
+        background: #5568d3;
+      }
+
+      .time-set-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       .control-group input {
@@ -161,9 +238,8 @@
         cursor: pointer;
         font-size: 18px;
         font-weight: 600;
-        width: 100%;
-        margin: 20px 0;
         transition: transform 0.2s, box-shadow 0.2s;
+        white-space: nowrap;
       }
 
       .extract-btn:hover:not(:disabled) {
@@ -176,8 +252,28 @@
         cursor: not-allowed;
       }
 
+      .stop-btn {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 15px 40px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+        white-space: nowrap;
+      }
+
+      .stop-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+      }
+
       .progress {
-        margin: 20px 0;
+        width: 100%;
+        max-width: 500px;
+        margin: 0;
         display: none;
       }
 
@@ -207,6 +303,24 @@
 
       .preview-section {
         margin-top: 30px;
+      }
+
+      .preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .preview-header h2 {
+        margin: 0;
+      }
+
+      .preview-actions {
+        display: flex;
+        gap: 10px;
       }
 
       .preview-grid {
@@ -242,17 +356,41 @@
         font-size: 12px;
       }
 
+      .preview-item .delete-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: rgba(220, 53, 69, 0.9);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, transform 0.2s;
+        z-index: 10;
+      }
+
+      .preview-item .delete-btn:hover {
+        background: rgba(220, 53, 69, 1);
+        transform: scale(1.1);
+      }
+
       .download-btn {
         background: #28a745;
         color: white;
-        padding: 12px 30px;
+        padding: 8px 20px;
         border: none;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 600;
-        margin-top: 20px;
         transition: transform 0.2s, box-shadow 0.2s;
+        white-space: nowrap;
       }
 
       .download-btn:hover:not(:disabled) {
@@ -261,6 +399,29 @@
       }
 
       .download-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .remove-all-btn {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+        white-space: nowrap;
+      }
+
+      .remove-all-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+      }
+
+      .remove-all-btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
       }
@@ -296,58 +457,122 @@
         </button>
       </div>
 
+      <div class="controls hidden" id="controls">
+        <div class="control-inputs">
+          <div class="control-group">
+            <label for="extractMode">Extraction Mode</label>
+            <select id="extractMode">
+              <option value="interval">By Interval (seconds)</option>
+              <option value="count">By Total Count</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label id="valueLabel" for="extractValue">Interval (seconds)</label>
+            <input
+              type="number"
+              id="extractValue"
+              min="0.1"
+              step="0.1"
+              value="1"
+            />
+          </div>
+        </div>
+        <div class="control-inputs">
+          <div class="control-group">
+            <label for="startTime"
+              >Start Time<br /><small>(mm:ss or mm:ss.sss)</small></label
+            >
+            <div class="time-input-group">
+              <input
+                type="text"
+                id="startTime"
+                value="00:00"
+                placeholder="0:00 or 0"
+              />
+              <button
+                type="button"
+                class="time-set-btn"
+                id="setStartBtn"
+                title="Set from current video time"
+              >
+                📍
+              </button>
+            </div>
+          </div>
+          <div class="control-group">
+            <label for="endTime"
+              >End Time<br /><small>(mm:ss or mm:ss.sss)</small></label
+            >
+            <div class="time-input-group">
+              <input
+                type="text"
+                id="endTime"
+                value="0"
+                placeholder="0 = end of video"
+              />
+              <button
+                type="button"
+                class="time-set-btn"
+                id="setEndBtn"
+                title="Set from current video time"
+              >
+                📍
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="control-buttons">
+          <div class="buttons-row">
+            <button class="extract-btn" id="extractBtn" disabled>
+              Extract Frames
+            </button>
+            <button class="stop-btn hidden" id="stopBtn">
+              ⏹ Stop Extraction
+            </button>
+          </div>
+          <div class="progress hidden" id="progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="video-preview hidden" id="videoPreview">
         <video id="video" controls></video>
+      </div>
+
+      <div class="snapshot-section hidden" id="snapshotSection">
         <button class="snapshot-btn" id="snapshotBtn">
-          📸 Capture Current Frame
+          📸 Capture Current Frame (Press C)
         </button>
-      </div>
-
-      <div class="controls hidden" id="controls">
-        <div class="control-group">
-          <label for="extractMode">Extraction Mode</label>
-          <select id="extractMode">
-            <option value="interval">By Interval (seconds)</option>
-            <option value="count">By Total Count</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label id="valueLabel" for="extractValue">Interval (seconds)</label>
-          <input
-            type="number"
-            id="extractValue"
-            min="0.1"
-            step="0.1"
-            value="1"
-          />
-        </div>
-      </div>
-
-      <button class="extract-btn hidden" id="extractBtn" disabled>
-        Extract Frames
-      </button>
-
-      <div class="progress hidden" id="progress">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill">0%</div>
-        </div>
       </div>
 
       <div id="error" class="error hidden"></div>
 
       <div class="preview-section hidden" id="previewSection">
-        <h2>Extracted Frames</h2>
+        <div class="preview-header">
+          <h2>Extracted Frames (<span id="frameCount">0</span>)</h2>
+          <div class="preview-actions">
+            <button class="download-btn" id="downloadBtn" disabled>
+              Download as ZIP
+            </button>
+            <button class="remove-all-btn hidden" id="removeAllBtn" disabled>
+              🗑️ Remove All
+            </button>
+          </div>
+        </div>
         <div class="preview-grid" id="previewGrid"></div>
-        <button class="download-btn" id="downloadBtn" disabled>
-          Download as ZIP
-        </button>
       </div>
     </div>
 
     <script>
       let videoFile = null
+      let videoFileName = ''
       let extractedFrames = []
       let videoElement = null
+      let shouldStopExtraction = false
+      let frameIdCounter = 0
 
       const uploadSection = document.getElementById('uploadSection')
       const videoInput = document.getElementById('videoInput')
@@ -357,14 +582,22 @@
       const extractMode = document.getElementById('extractMode')
       const extractValue = document.getElementById('extractValue')
       const valueLabel = document.getElementById('valueLabel')
+      const startTime = document.getElementById('startTime')
+      const endTime = document.getElementById('endTime')
+      const setStartBtn = document.getElementById('setStartBtn')
+      const setEndBtn = document.getElementById('setEndBtn')
       const extractBtn = document.getElementById('extractBtn')
       const progress = document.getElementById('progress')
       const progressFill = document.getElementById('progressFill')
       const previewSection = document.getElementById('previewSection')
       const previewGrid = document.getElementById('previewGrid')
       const downloadBtn = document.getElementById('downloadBtn')
+      const removeAllBtn = document.getElementById('removeAllBtn')
       const errorDiv = document.getElementById('error')
       const snapshotBtn = document.getElementById('snapshotBtn')
+      const snapshotSection = document.getElementById('snapshotSection')
+      const stopBtn = document.getElementById('stopBtn')
+      const frameCount = document.getElementById('frameCount')
 
       // Drag and drop
       uploadSection.addEventListener('dragover', e => {
@@ -393,8 +626,73 @@
         }
       })
 
+      // Check if Firefox has persisted a file on page load
+      if (videoInput.files.length > 0) {
+        handleVideoFile(videoInput.files[0])
+      }
+
+      // Update label on page load (handles Firefox stored values)
+      updateValueLabel()
+
       extractMode.addEventListener('change', () => {
         updateValueLabel()
+      })
+
+      // Parse time input (supports mm:ss.sss, mm:ss, or plain seconds)
+      function parseTimeInput(input) {
+        if (!input || input.trim() === '' || input === '0') {
+          return 0
+        }
+
+        // Try to parse as mm:ss.sss or mm:ss format
+        const timeMatch = input.match(/^(\d+):(\d+)(?:\.(\d+))?$/)
+        if (timeMatch) {
+          const minutes = parseInt(timeMatch[1], 10)
+          const seconds = parseInt(timeMatch[2], 10)
+          const milliseconds = timeMatch[3]
+            ? parseFloat('0.' + timeMatch[3])
+            : 0
+          return minutes * 60 + seconds + milliseconds
+        }
+
+        // Try to parse as plain number (seconds)
+        const numValue = parseFloat(input)
+        if (!isNaN(numValue)) {
+          return numValue
+        }
+
+        return null // Invalid format
+      }
+
+      // Format seconds to mm:ss.sss or mm:ss
+      function formatTime(seconds) {
+        if (seconds === 0) return '0'
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        if (secs % 1 === 0) {
+          // No decimal part, use mm:ss
+          return `${mins}:${String(Math.floor(secs)).padStart(2, '0')}`
+        } else {
+          // Has decimal part, use mm:ss.sss
+          const secsStr = secs.toFixed(3)
+          return `${mins}:${secsStr.padStart(6, '0')}`
+        }
+      }
+
+      // Set start time from current video position
+      setStartBtn.addEventListener('click', () => {
+        if (videoElement && videoElement.readyState >= 2) {
+          const currentTime = videoElement.currentTime
+          startTime.value = formatTime(currentTime)
+        }
+      })
+
+      // Set end time from current video position
+      setEndBtn.addEventListener('click', () => {
+        if (videoElement && videoElement.readyState >= 2) {
+          const currentTime = videoElement.currentTime
+          endTime.value = formatTime(currentTime)
+        }
       })
 
       function updateValueLabel() {
@@ -402,34 +700,67 @@
           valueLabel.textContent = 'Interval (seconds)'
           extractValue.min = '0.1'
           extractValue.step = '0.1'
-          extractValue.value = '1'
+          // Only set default if value is empty or invalid
+          if (!extractValue.value || parseFloat(extractValue.value) <= 0) {
+            extractValue.value = '1'
+          }
         } else {
           valueLabel.textContent = 'Total Number of Images'
           extractValue.min = '1'
           extractValue.step = '1'
-          extractValue.value = '10'
+          // Only set default if value is empty or invalid
+          if (!extractValue.value || parseInt(extractValue.value) < 1) {
+            extractValue.value = '10'
+          }
         }
       }
 
       function handleVideoFile(file) {
         videoFile = file
+        // Store original filename without extension
+        const fileName = file.name
+        const lastDot = fileName.lastIndexOf('.')
+        videoFileName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName
+        // Sanitize filename (remove special characters, keep only alphanumeric, dash, underscore)
+        videoFileName = videoFileName.replace(/[^a-zA-Z0-9_-]/g, '_')
+
         const url = URL.createObjectURL(file)
         video.src = url
         videoElement = video
 
         videoPreview.classList.remove('hidden')
+        snapshotSection.classList.remove('hidden')
         controls.classList.remove('hidden')
-        extractBtn.classList.remove('hidden')
         extractBtn.disabled = false
         errorDiv.classList.add('hidden')
 
+        // Update label to match current mode (handles Firefox stored values)
+        updateValueLabel()
+
+        // Reset time range inputs
+        startTime.value = '00:00'
+        endTime.value = '0'
+
+        // Update placeholder and set end time when video metadata loads
+        video.addEventListener(
+          'loadedmetadata',
+          () => {
+            const duration = video.duration
+            endTime.placeholder = `0 = end (${formatTime(duration)})`
+            // Auto-set end time to video duration
+            endTime.value = formatTime(duration)
+          },
+          { once: true },
+        )
+
         // Reset previous extraction
         extractedFrames = []
+        updateFrameCount()
         previewSection.classList.add('hidden')
         downloadBtn.disabled = true
       }
 
-      snapshotBtn.addEventListener('click', async () => {
+      async function triggerCapture() {
         if (!videoElement || videoElement.readyState < 2) {
           showError('Please wait for the video to load')
           return
@@ -440,7 +771,148 @@
         } catch (error) {
           showError('Error capturing frame: ' + error.message)
         }
+      }
+
+      snapshotBtn.addEventListener('click', triggerCapture)
+
+      // Keyboard shortcut: Press 'C' to capture frame
+      // Note: Left/Right arrows and Spacebar work by default for video controls
+      document.addEventListener('keydown', async e => {
+        // Only handle capture key, let browser handle arrow keys and spacebar by default
+        if (
+          (e.key === 'c' || e.key === 'C') &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          e.target.tagName !== 'INPUT' &&
+          e.target.tagName !== 'TEXTAREA' &&
+          !snapshotSection.classList.contains('hidden')
+        ) {
+          e.preventDefault()
+          await triggerCapture()
+        }
+        // Don't prevent default for ArrowLeft, ArrowRight, or Space - let browser handle them
       })
+
+      function createPreviewItem(frame, frameIndex) {
+        const img = document.createElement('img')
+        img.src = URL.createObjectURL(frame.blob)
+        img.alt = `Frame ${frameIndex}`
+
+        const previewItem = document.createElement('div')
+        previewItem.className = 'preview-item'
+        previewItem.dataset.frameId = frame.id
+        previewItem.dataset.frameIndex = frameIndex
+        previewItem.appendChild(img)
+
+        // Delete button
+        const deleteBtn = document.createElement('button')
+        deleteBtn.className = 'delete-btn'
+        deleteBtn.type = 'button' // Prevent form submission
+        deleteBtn.innerHTML = '×'
+        deleteBtn.title = 'Remove this frame'
+        deleteBtn.addEventListener('click', e => {
+          e.preventDefault()
+          e.stopPropagation()
+          removeFrame(frame.id)
+        })
+        previewItem.appendChild(deleteBtn)
+
+        // Frame number label
+        const frameNumber = document.createElement('div')
+        frameNumber.className = 'frame-number'
+        const manualLabel = frame.isManual ? ' - Manual' : ''
+        frameNumber.textContent = `Frame ${frameIndex} (${frame.time.toFixed(
+          2,
+        )}s)${manualLabel}`
+        previewItem.appendChild(frameNumber)
+
+        return previewItem
+      }
+
+      function updateFrameCount() {
+        frameCount.textContent = extractedFrames.length
+        // Show/hide remove all button based on frame count
+        if (extractedFrames.length > 0) {
+          removeAllBtn.classList.remove('hidden')
+          removeAllBtn.disabled = false
+        } else {
+          removeAllBtn.classList.add('hidden')
+          removeAllBtn.disabled = true
+        }
+      }
+
+      function removeFrame(frameId) {
+        // Remove from DOM first to revoke object URL
+        const previewItem = previewGrid.querySelector(
+          `[data-frame-id="${frameId}"]`,
+        )
+        if (previewItem) {
+          const img = previewItem.querySelector('img')
+          if (img && img.src) {
+            URL.revokeObjectURL(img.src)
+          }
+          // Smooth removal with fade out
+          previewItem.style.transition = 'opacity 0.1s, transform 0.1s'
+          previewItem.style.opacity = '0'
+          previewItem.style.transform = 'scale(0.9)'
+          setTimeout(() => {
+            previewItem.remove()
+          }, 100)
+        }
+
+        // Remove from array using unique ID
+        extractedFrames = extractedFrames.filter(f => f.id !== frameId)
+
+        // Update indices of remaining frames without full rebuild
+        updateFrameIndices()
+        updateFrameCount()
+
+        // Disable download if no frames left
+        if (extractedFrames.length === 0) {
+          downloadBtn.disabled = true
+          previewSection.classList.add('hidden')
+        }
+      }
+
+      function updateFrameIndices() {
+        // Update indices in array and DOM without full rebuild
+        // Since frames are displayed newest first, we need to update in reverse order
+        const reversedFrames = [...extractedFrames].reverse()
+        reversedFrames.forEach((frame, idx) => {
+          const newIndex = extractedFrames.length - idx
+          const oldIndex = frame.index
+          frame.index = newIndex
+
+          // Update DOM element if it exists using unique ID
+          const previewItem = previewGrid.querySelector(
+            `[data-frame-id="${frame.id}"]`,
+          )
+          if (previewItem) {
+            previewItem.dataset.frameIndex = newIndex
+            const frameNumber = previewItem.querySelector('.frame-number')
+            if (frameNumber) {
+              const manualLabel = frame.isManual ? ' - Manual' : ''
+              frameNumber.textContent = `Frame ${newIndex} (${frame.time.toFixed(
+                2,
+              )}s)${manualLabel}`
+            }
+          }
+        })
+      }
+
+      function rebuildPreviewGrid() {
+        // Clear and rebuild preview grid with updated indices (newest first)
+        previewGrid.innerHTML = ''
+        // Reverse array to show newest first
+        const reversedFrames = [...extractedFrames].reverse()
+        reversedFrames.forEach((frame, idx) => {
+          const newIndex = extractedFrames.length - idx
+          frame.index = newIndex
+          const previewItem = createPreviewItem(frame, newIndex)
+          previewGrid.appendChild(previewItem)
+        })
+      }
 
       async function captureCurrentFrame() {
         const canvas = document.createElement('canvas')
@@ -460,30 +932,22 @@
         const currentTime = videoElement.currentTime
         const frameIndex = extractedFrames.length + 1
 
-        extractedFrames.push({
+        const frame = {
+          id: ++frameIdCounter,
           blob: blob,
           time: currentTime,
           index: frameIndex,
           isManual: true,
-        })
+        }
 
-        // Show preview
-        const img = document.createElement('img')
-        img.src = URL.createObjectURL(blob)
-        img.alt = `Frame ${frameIndex}`
+        extractedFrames.push(frame)
 
-        const previewItem = document.createElement('div')
-        previewItem.className = 'preview-item'
-        previewItem.appendChild(img)
+        // Show preview (newest first)
+        const previewItem = createPreviewItem(frame, frameIndex)
+        previewGrid.insertBefore(previewItem, previewGrid.firstChild)
 
-        const frameNumber = document.createElement('div')
-        frameNumber.className = 'frame-number'
-        frameNumber.textContent = `Frame ${frameIndex} (${currentTime.toFixed(
-          2,
-        )}s) - Manual`
-        previewItem.appendChild(frameNumber)
-
-        previewGrid.appendChild(previewItem)
+        // Update frame count
+        updateFrameCount()
 
         // Show preview section and enable download
         previewSection.classList.remove('hidden')
@@ -502,8 +966,12 @@
         }
 
         extractBtn.disabled = true
+        stopBtn.classList.remove('hidden')
+        stopBtn.disabled = false
+        stopBtn.textContent = '⏹ Stop Extraction'
         progress.classList.add('active')
         errorDiv.classList.add('hidden')
+        shouldStopExtraction = false
 
         // Preserve manually captured frames
         const manualFrames = extractedFrames.filter(f => f.isManual)
@@ -512,24 +980,11 @@
         // Clear preview grid but keep manual frames
         previewGrid.innerHTML = ''
 
-        // Re-add manual frames to preview
-        for (let i = 0; i < manualFrames.length; i++) {
-          const frame = manualFrames[i]
-          const img = document.createElement('img')
-          img.src = URL.createObjectURL(frame.blob)
-          img.alt = `Frame ${frame.index}`
-
-          const previewItem = document.createElement('div')
-          previewItem.className = 'preview-item'
-          previewItem.appendChild(img)
-
-          const frameNumber = document.createElement('div')
-          frameNumber.className = 'frame-number'
-          frameNumber.textContent = `Frame ${frame.index} (${frame.time.toFixed(
-            2,
-          )}s) - Manual`
-          previewItem.appendChild(frameNumber)
-
+        // Re-add manual frames to preview (newest first)
+        const reversedManualFrames = [...manualFrames].reverse()
+        for (let i = 0; i < reversedManualFrames.length; i++) {
+          const frame = reversedManualFrames[i]
+          const previewItem = createPreviewItem(frame, frame.index)
           previewGrid.appendChild(previewItem)
         }
 
@@ -542,6 +997,7 @@
         if (mode === 'interval' && value <= 0) {
           showError('Interval must be greater than 0')
           extractBtn.disabled = false
+          stopBtn.classList.add('hidden')
           progress.classList.remove('active')
           return
         }
@@ -549,20 +1005,59 @@
         if (mode === 'count' && value < 1) {
           showError('Total count must be at least 1')
           extractBtn.disabled = false
+          stopBtn.classList.add('hidden')
+          progress.classList.remove('active')
+          return
+        }
+
+        // Parse time inputs
+        const start = parseTimeInput(startTime.value)
+        const end = parseTimeInput(endTime.value)
+
+        if (start === null) {
+          showError(
+            'Invalid start time format. Use mm:ss, mm:ss.sss, or seconds',
+          )
+          extractBtn.disabled = false
+          stopBtn.classList.add('hidden')
+          progress.classList.remove('active')
+          return
+        }
+
+        if (end === null) {
+          showError('Invalid end time format. Use mm:ss, mm:ss.sss, or seconds')
+          extractBtn.disabled = false
+          stopBtn.classList.add('hidden')
+          progress.classList.remove('active')
+          return
+        }
+
+        if (start < 0) {
+          showError('Start time cannot be negative')
+          extractBtn.disabled = false
+          stopBtn.classList.add('hidden')
           progress.classList.remove('active')
           return
         }
 
         try {
-          await extractFrames(mode, value)
+          await extractFrames(mode, value, start, end)
         } catch (error) {
           showError('Error extracting frames: ' + error.message)
           extractBtn.disabled = false
+          stopBtn.classList.add('hidden')
           progress.classList.remove('active')
+          shouldStopExtraction = false
         }
       })
 
-      async function extractFrames(mode, value) {
+      stopBtn.addEventListener('click', () => {
+        shouldStopExtraction = true
+        stopBtn.disabled = true
+        stopBtn.textContent = '⏹ Stopping...'
+      })
+
+      async function extractFrames(mode, value, startTime = 0, endTime = 0) {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
 
@@ -581,24 +1076,46 @@
         canvas.width = videoElement.videoWidth
         canvas.height = videoElement.videoHeight
 
+        // Determine actual start and end times
+        const start = Math.max(0, Math.min(startTime, duration))
+        const end = endTime > 0 ? Math.min(endTime, duration) : duration
+
+        if (end <= start) {
+          throw new Error('End time must be greater than start time')
+        }
+
+        const rangeDuration = end - start
         let frameTimes = []
 
         if (mode === 'interval') {
-          // Extract by interval
-          for (let time = 0; time < duration; time += value) {
-            frameTimes.push(Math.min(time, duration))
+          // Extract by interval within the time range
+          for (let time = start; time < end; time += value) {
+            frameTimes.push(Math.min(time, end))
+          }
+          // Make sure we include the end time if it's close
+          if (
+            frameTimes.length === 0 ||
+            frameTimes[frameTimes.length - 1] < end - value / 2
+          ) {
+            frameTimes.push(end)
           }
         } else {
-          // Extract by total count
-          const interval = duration / (value + 1)
+          // Extract by total count within the time range
+          const interval = rangeDuration / (value + 1)
           for (let i = 1; i <= value; i++) {
-            frameTimes.push(i * interval)
+            frameTimes.push(start + i * interval)
           }
         }
 
         const totalFrames = frameTimes.length
 
         for (let i = 0; i < frameTimes.length; i++) {
+          // Check if extraction should be stopped
+          if (shouldStopExtraction) {
+            progressFill.textContent = 'Stopped'
+            break
+          }
+
           const time = frameTimes[i]
 
           // Seek to frame time
@@ -609,6 +1126,12 @@
             videoElement.addEventListener('seeked', resolve, { once: true })
           })
 
+          // Check again after seek (in case stop was clicked during seek)
+          if (shouldStopExtraction) {
+            progressFill.textContent = 'Stopped'
+            break
+          }
+
           // Draw frame to canvas
           ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
 
@@ -618,12 +1141,14 @@
           })
 
           const frameIndex = extractedFrames.length + 1
-          extractedFrames.push({
+          const frame = {
+            id: ++frameIdCounter,
             blob: blob,
             time: time,
             index: frameIndex,
             isManual: false,
-          })
+          }
+          extractedFrames.push(frame)
 
           // Update progress
           const progressPercent = ((i + 1) / totalFrames) * 100
@@ -631,26 +1156,19 @@
           progressFill.textContent = Math.round(progressPercent) + '%'
 
           // Show preview
-          const img = document.createElement('img')
-          img.src = URL.createObjectURL(blob)
-          img.alt = `Frame ${frameIndex}`
-
-          const previewItem = document.createElement('div')
-          previewItem.className = 'preview-item'
-          previewItem.appendChild(img)
-
-          const frameNumber = document.createElement('div')
-          frameNumber.className = 'frame-number'
-          frameNumber.textContent = `Frame ${frameIndex} (${time.toFixed(2)}s)`
-          previewItem.appendChild(frameNumber)
-
+          const previewItem = createPreviewItem(frame, frameIndex)
           previewGrid.appendChild(previewItem)
         }
 
+        // Update frame count
+        updateFrameCount()
+
         progress.classList.remove('active')
+        stopBtn.classList.add('hidden')
         previewSection.classList.remove('hidden')
         downloadBtn.disabled = false
         extractBtn.disabled = false
+        shouldStopExtraction = false
       }
 
       downloadBtn.addEventListener('click', async () => {
@@ -667,10 +1185,19 @@
 
           for (let i = 0; i < extractedFrames.length; i++) {
             const frame = extractedFrames[i]
-            const filename = `frame_${String(frame.index).padStart(
-              4,
-              '0',
-            )}_${frame.time.toFixed(2)}s.jpg`
+            // Format time as mm-ss.sss (minutes-seconds.milliseconds)
+            const totalSeconds = frame.time
+            const mins = Math.floor(totalSeconds / 60)
+            const secs = totalSeconds % 60
+            const secsInt = Math.floor(secs)
+            const milliseconds = Math.round((secs - secsInt) * 1000)
+            const timeStr = `${String(mins).padStart(2, '0')}-${String(
+              secsInt,
+            ).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`
+
+            const filename = videoFileName
+              ? `${videoFileName}_${timeStr}.jpg`
+              : `frame_${String(frame.index).padStart(4, '0')}_${timeStr}.jpg`
             zip.file(filename, frame.blob)
           }
 
@@ -678,7 +1205,12 @@
           const url = URL.createObjectURL(zipBlob)
           const a = document.createElement('a')
           a.href = url
-          a.download = `video_frames_${Date.now()}.zip`
+          // Use video filename with frames suffix and frame count
+          const frameCount = extractedFrames.length
+          const zipFilename = videoFileName
+            ? `${videoFileName}_frames_x${frameCount}.zip`
+            : `video_frames_x${frameCount}_${Date.now()}.zip`
+          a.download = zipFilename
           document.body.appendChild(a)
           a.click()
           document.body.removeChild(a)
@@ -691,6 +1223,24 @@
           downloadBtn.textContent = 'Download as ZIP'
           downloadBtn.disabled = false
         }
+      })
+
+      removeAllBtn.addEventListener('click', () => {
+        if (extractedFrames.length === 0) return
+
+        // Revoke all object URLs
+        previewGrid.querySelectorAll('img').forEach(img => {
+          if (img.src) {
+            URL.revokeObjectURL(img.src)
+          }
+        })
+
+        // Clear all frames
+        extractedFrames = []
+        previewGrid.innerHTML = ''
+        updateFrameCount()
+        downloadBtn.disabled = true
+        previewSection.classList.add('hidden')
       })
     </script>
   </body>
