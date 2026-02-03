@@ -822,9 +822,7 @@
         const frameNumber = document.createElement('div')
         frameNumber.className = 'frame-number'
         const manualLabel = frame.isManual ? ' - Manual' : ''
-        frameNumber.textContent = `Frame ${frameIndex} (${frame.time.toFixed(
-          2,
-        )}s)${manualLabel}`
+        frameNumber.textContent = `Frame ${frameIndex} (${formatTime(frame.time)})${manualLabel}`
         previewItem.appendChild(frameNumber)
 
         return previewItem
@@ -893,9 +891,7 @@
             const frameNumber = previewItem.querySelector('.frame-number')
             if (frameNumber) {
               const manualLabel = frame.isManual ? ' - Manual' : ''
-              frameNumber.textContent = `Frame ${newIndex} (${frame.time.toFixed(
-                2,
-              )}s)${manualLabel}`
+              frameNumber.textContent = `Frame ${newIndex} (${formatTime(frame.time)})${manualLabel}`
             }
           }
         })
