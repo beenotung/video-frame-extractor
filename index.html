@@ -1527,7 +1527,8 @@
         const frameNumber = document.createElement('div')
         frameNumber.className = 'frame-number'
         const manualLabel = frame.isManual ? ' - Manual' : ''
-        const segLabel = frame.segmentIndex ? ` Seg${frame.segmentIndex}` : ''
+        const segIndexDisplay = frame.segmentIndex !== undefined ? frame.segmentIndex + 1 : null
+        const segLabel = segIndexDisplay ? ` Seg${segIndexDisplay}` : ''
         frameNumber.textContent = `Frame ${frameIndex} (${formatTime(frame.time)})${segLabel}${manualLabel}`
         previewItem.appendChild(frameNumber)
 
@@ -1597,8 +1598,9 @@
             const frameNumber = previewItem.querySelector('.frame-number')
             if (frameNumber) {
               const manualLabel = frame.isManual ? ' - Manual' : ''
-              const segLabel = frame.segmentIndex ? ` Seg${frame.segmentIndex}` : ''
-              frameNumber.textContent = `Frame ${newIndex} (${formatTime(frame.time)})${segLabel}${manualLabel}`
+              const segIndexDisplay2 = frame.segmentIndex !== undefined ? frame.segmentIndex + 1 : null
+              const segLabel2 = segIndexDisplay2 ? ` Seg${segIndexDisplay2}` : ''
+              frameNumber.textContent = `Frame ${newIndex} (${formatTime(frame.time)})${segLabel2}${manualLabel}`
             }
           }
         })
@@ -1920,14 +1922,15 @@
             const secsInt = Math.floor(secs)
             const ms = Math.round((secs - secsInt) * 1000)
             const timeStr = `${String(hrs).padStart(2, '0')}.${String(mins).padStart(2, '0')}.${String(secsInt).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
-            const displayIndex = frame.index + 1
-            const hasSegment = frame.segmentIndex !== undefined
+            const displayIndex = frame.index
+            const segDisplayIndex = frame.segmentIndex !== undefined ? frame.segmentIndex + 1 : undefined
+            const hasSegment = segDisplayIndex !== undefined
             const filename = videoFileName
               ? hasSegment
-                ? `${videoFileName}_seg${frame.segmentIndex}_frame${displayIndex}_${timeStr}.jpg`
+                ? `${videoFileName}_seg${segDisplayIndex}_frame${displayIndex}_${timeStr}.jpg`
                 : `${videoFileName}_frame${displayIndex}_${timeStr}.jpg`
               : hasSegment
-                ? `frame_seg${frame.segmentIndex}_f${displayIndex}_${timeStr}.jpg`
+                ? `frame_seg${segDisplayIndex}_f${displayIndex}_${timeStr}.jpg`
                 : `frame_${String(displayIndex).padStart(4, '0')}_${timeStr}.jpg`
             zip.file(filename, frame.blob)
           }
