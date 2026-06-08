@@ -437,6 +437,230 @@
         border-radius: 6px;
         margin: 20px 0;
       }
+
+      /* Segments UI */
+      .segments-section {
+        margin: 20px 0;
+      }
+
+      .segments-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .segments-header h3 {
+        margin: 0;
+        color: #333;
+      }
+
+      .segment-mode-toggle {
+        display: flex;
+        gap: 4px;
+        background: #e8e8e8;
+        border-radius: 6px;
+        padding: 3px;
+      }
+
+      .segment-mode-toggle label {
+        padding: 4px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: #666;
+        transition: all 0.2s;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      .segment-mode-toggle label.active {
+        background: white;
+        color: #333;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      .segment-mode-toggle input {
+        display: none;
+      }
+
+      .segment-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .segment-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f8f9ff;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        flex-wrap: wrap;
+      }
+
+      .segment-label {
+        font-weight: 600;
+        color: #333;
+        min-width: 70px;
+        font-size: 14px;
+      }
+
+      .segment-time-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .segment-time-group label {
+        font-size: 12px;
+        color: #666;
+        font-weight: 500;
+      }
+
+      .segment-time-group input {
+        width: 90px;
+        padding: 6px 8px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .segment-time-group input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .segment-set-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+        line-height: 1;
+      }
+
+      .segment-set-btn:hover {
+        background: #5568d3;
+      }
+
+      .segment-set-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .segment-remove-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 26px;
+        height: 26px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, transform 0.2s;
+        line-height: 1;
+        margin-left: auto;
+      }
+
+      .segment-remove-btn:hover {
+        background: #c82333;
+        transform: scale(1.1);
+      }
+
+      .add-segment-btn {
+        background: #667eea;
+        color: white;
+        padding: 8px 18px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.2s;
+        white-space: nowrap;
+      }
+
+      .add-segment-btn:hover {
+        background: #5568d3;
+      }
+
+      /* Timeline */
+      .timeline-section {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9ff;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .timeline-bar-container {
+        position: relative;
+        width: 100%;
+        height: 36px;
+        background: #e8e8e8;
+        border-radius: 6px;
+        overflow: hidden;
+        margin-bottom: 6px;
+      }
+
+      .timeline-segment {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        border-radius: 4px;
+        border: 2px solid;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        min-width: 2px;
+      }
+
+      .timeline-segment:hover {
+        opacity: 0.8;
+      }
+
+      .timeline-segment-label {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 10px;
+        font-weight: 700;
+        color: rgba(0, 0, 0, 0.6);
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      .timeline-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #888;
+      }
+
+      .timeline-labels span {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .empty-segments-msg {
+        text-align: center;
+        color: #999;
+        padding: 15px;
+        font-style: italic;
+        font-size: 14px;
+      }
     </style>
   </head>
   <body>
@@ -477,49 +701,28 @@
             />
           </div>
         </div>
-        <div class="control-inputs">
-          <div class="control-group">
-            <label for="startTime"
-              >Start Time<br /><small>(mm:ss or mm:ss.sss)</small></label
-            >
-            <div class="time-input-group">
-              <input
-                type="text"
-                id="startTime"
-                value="00:00"
-                placeholder="0:00 or 0"
-              />
-              <button
-                type="button"
-                class="time-set-btn"
-                id="setStartBtn"
-                title="Set from current video time"
-              >
-                📍
-              </button>
+        <div class="segments-section">
+          <div class="segments-header">
+            <h3>Segments</h3>
+            <div class="segment-mode-toggle">
+              <label class="active" data-mode="points">
+                <input type="radio" name="segmentMode" value="points" checked />
+                Cutting Points
+              </label>
+              <label data-mode="explicit">
+                <input type="radio" name="segmentMode" value="explicit" />
+                Explicit
+              </label>
             </div>
-          </div>
-          <div class="control-group">
-            <label for="endTime"
-              >End Time<br /><small>(mm:ss or mm:ss.sss)</small></label
+            <button
+              type="button"
+              class="add-segment-btn"
+              id="addSegmentBtn"
             >
-            <div class="time-input-group">
-              <input
-                type="text"
-                id="endTime"
-                value="0"
-                placeholder="0 = end of video"
-              />
-              <button
-                type="button"
-                class="time-set-btn"
-                id="setEndBtn"
-                title="Set from current video time"
-              >
-                📍
-              </button>
-            </div>
+              + Add
+            </button>
           </div>
+          <div class="segment-list" id="segmentList"></div>
         </div>
         <div class="control-buttons">
           <div class="buttons-row">
@@ -540,6 +743,16 @@
 
       <div class="video-preview hidden" id="videoPreview">
         <video id="video" controls></video>
+      </div>
+
+      <div class="timeline-section hidden" id="timelineSection">
+        <div class="timeline-bar-container" id="timelineBarContainer">
+          <div id="timelineSegments"></div>
+        </div>
+        <div class="timeline-labels" id="timelineLabels">
+          <span id="timelineStartLabel">0:00</span>
+          <span id="timelineEndLabel">0:00</span>
+        </div>
       </div>
 
       <div class="snapshot-section hidden" id="snapshotSection">
@@ -573,6 +786,10 @@
       let videoElement = null
       let shouldStopExtraction = false
       let frameIdCounter = 0
+      let segmentMode = 'points'
+      let cutPoints = []
+      let explicitSegments = []
+      let segmentIdCounter = 0
 
       const uploadSection = document.getElementById('uploadSection')
       const videoInput = document.getElementById('videoInput')
@@ -582,10 +799,6 @@
       const extractMode = document.getElementById('extractMode')
       const extractValue = document.getElementById('extractValue')
       const valueLabel = document.getElementById('valueLabel')
-      const startTime = document.getElementById('startTime')
-      const endTime = document.getElementById('endTime')
-      const setStartBtn = document.getElementById('setStartBtn')
-      const setEndBtn = document.getElementById('setEndBtn')
       const extractBtn = document.getElementById('extractBtn')
       const progress = document.getElementById('progress')
       const progressFill = document.getElementById('progressFill')
@@ -598,6 +811,12 @@
       const snapshotSection = document.getElementById('snapshotSection')
       const stopBtn = document.getElementById('stopBtn')
       const frameCount = document.getElementById('frameCount')
+      const segmentList = document.getElementById('segmentList')
+      const addSegmentBtn = document.getElementById('addSegmentBtn')
+      const timelineSection = document.getElementById('timelineSection')
+      const timelineSegments = document.getElementById('timelineSegments')
+      const timelineStartLabel = document.getElementById('timelineStartLabel')
+      const timelineEndLabel = document.getElementById('timelineEndLabel')
 
       // Drag and drop
       uploadSection.addEventListener('dragover', e => {
@@ -679,22 +898,6 @@
         }
       }
 
-      // Set start time from current video position
-      setStartBtn.addEventListener('click', () => {
-        if (videoElement && videoElement.readyState >= 2) {
-          const currentTime = videoElement.currentTime
-          startTime.value = formatTime(currentTime)
-        }
-      })
-
-      // Set end time from current video position
-      setEndBtn.addEventListener('click', () => {
-        if (videoElement && videoElement.readyState >= 2) {
-          const currentTime = videoElement.currentTime
-          endTime.value = formatTime(currentTime)
-        }
-      })
-
       function updateValueLabel() {
         if (extractMode.value === 'interval') {
           valueLabel.textContent = 'Interval (seconds)'
@@ -705,7 +908,7 @@
             extractValue.value = '1'
           }
         } else {
-          valueLabel.textContent = 'Total Number of Images'
+          valueLabel.textContent = 'Images Per Segment'
           extractValue.min = '1'
           extractValue.step = '1'
           // Only set default if value is empty or invalid
@@ -713,6 +916,408 @@
             extractValue.value = '10'
           }
         }
+      }
+
+      const segmentColors = [
+        { fill: 'rgba(102, 126, 234, 0.4)', border: '#667eea' },
+        { fill: 'rgba(40, 167, 69, 0.4)', border: '#28a745' },
+        { fill: 'rgba(220, 53, 69, 0.4)', border: '#dc3545' },
+        { fill: 'rgba(255, 193, 7, 0.4)', border: '#e0a800' },
+        { fill: 'rgba(23, 162, 184, 0.4)', border: '#17a2b8' },
+        { fill: 'rgba(153, 102, 255, 0.4)', border: '#9966ff' },
+      ]
+
+      function getSegmentColor(index) {
+        return segmentColors[index % segmentColors.length]
+      }
+
+      function getSegments() {
+        if (segmentMode === 'points') {
+          const segs = []
+          for (let i = 0; i < cutPoints.length - 1; i++) {
+            if (cutPoints[i + 1] > cutPoints[i]) {
+              segs.push({ start: cutPoints[i], end: cutPoints[i + 1] })
+            }
+          }
+          return segs
+        } else {
+          return explicitSegments.map(s => ({ start: s.start, end: s.end }))
+        }
+      }
+
+      function addCutPoint(time) {
+        if (time === undefined || time === null) {
+          if (!videoElement || videoElement.readyState < 2) return
+          time = videoElement.currentTime
+        }
+        // Insert in sorted order
+        cutPoints.push(time)
+        cutPoints.sort((a, b) => a - b)
+        // Remove duplicates
+        cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      function removeCutPoint(index) {
+        if (cutPoints.length <= 2) return // keep at least start and end
+        cutPoints.splice(index, 1)
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      function addExplicitSegment(start, end) {
+        // Default to start of video
+        if (start === undefined) start = 0
+        // Default to end of video if no end specified
+        if (end === undefined || end === null) {
+          if (videoElement && videoElement.readyState >= 2) {
+            end = videoElement.duration
+          } else {
+            end = 0
+          }
+        }
+        explicitSegments.push({
+          id: ++segmentIdCounter,
+          start: start,
+          end: end,
+        })
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      function removeExplicitSegment(id) {
+        explicitSegments = explicitSegments.filter(s => s.id !== id)
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      // Read start/end values from explicit segment input fields
+      function readExplicitSegmentsFromUI() {
+        const rows = segmentList.querySelectorAll('.segment-row[data-id]')
+        rows.forEach(row => {
+          const id = parseInt(row.dataset.id, 10)
+          const startInput = row.querySelector('.seg-start-input')
+          const endInput = row.querySelector('.seg-end-input')
+          if (startInput && endInput) {
+            const parsedStart = parseTimeInput(startInput.value)
+            const parsedEnd = parseTimeInput(endInput.value)
+            const seg = explicitSegments.find(s => s.id === id)
+            if (seg) {
+              // Keep existing value if parsing fails
+              seg.start = parsedStart !== null ? parsedStart : seg.start
+              seg.end = parsedEnd !== null ? parsedEnd : seg.end
+            }
+          }
+        })
+      }
+
+      // Read time values from cut point input fields and maintain sorted order
+      function readCutPointsFromUI() {
+        const rows = segmentList.querySelectorAll('.cutpoint-row[data-index]')
+        rows.forEach(row => {
+          const index = parseInt(row.dataset.index, 10)
+          const input = row.querySelector('.cutpoint-input')
+          if (input && index >= 0 && index < cutPoints.length) {
+            const parsed = parseTimeInput(input.value)
+            if (parsed !== null) {
+              cutPoints[index] = parsed
+            }
+          }
+        })
+        cutPoints.sort((a, b) => a - b)
+      }
+
+      // Convert explicit segments to cut points mode (preserves boundaries, removes gaps)
+      function switchToPointsMode() {
+        readExplicitSegmentsFromUI()
+        const pointsSet = new Set()
+        explicitSegments.forEach(s => {
+          pointsSet.add(s.start)
+          pointsSet.add(s.end)
+        })
+        cutPoints = [...pointsSet].sort((a, b) => a - b)
+        segmentMode = 'points'
+        // Update active state in mode toggle UI
+        document.querySelectorAll('.segment-mode-toggle label').forEach(l => l.classList.remove('active'))
+        const label = document.querySelector('.segment-mode-toggle label[data-mode="points"]')
+        label.classList.add('active')
+        label.querySelector('input').checked = true
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      // Convert cut points to explicit segments (creates contiguous segment pairs)
+      function switchToExplicitMode() {
+        readCutPointsFromUI()
+        explicitSegments = []
+        for (let i = 0; i < cutPoints.length - 1; i++) {
+          if (cutPoints[i + 1] > cutPoints[i]) {
+            explicitSegments.push({
+              id: ++segmentIdCounter,
+              start: cutPoints[i],
+              end: cutPoints[i + 1],
+            })
+          }
+        }
+        segmentMode = 'explicit'
+        // Update active state in mode toggle UI
+        document.querySelectorAll('.segment-mode-toggle label').forEach(l => l.classList.remove('active'))
+        const label = document.querySelector('.segment-mode-toggle label[data-mode="explicit"]')
+        label.classList.add('active')
+        label.querySelector('input').checked = true
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      function renderSegmentsUI() {
+        segmentList.innerHTML = ''
+
+        if (segmentMode === 'points') {
+          if (cutPoints.length === 0) {
+            const msg = document.createElement('div')
+            msg.className = 'empty-segments-msg'
+            msg.textContent = 'No cut points defined. Load a video and add cut points.'
+            segmentList.appendChild(msg)
+            return
+          }
+
+          cutPoints.forEach((time, index) => {
+            const row = document.createElement('div')
+            row.className = 'segment-row'
+            row.dataset.index = index
+            row.classList.add('cutpoint-row')
+
+            const label = document.createElement('span')
+            label.className = 'segment-label'
+            if (index === 0) {
+              label.textContent = 'Start'
+            } else if (index === cutPoints.length - 1) {
+              label.textContent = 'End'
+            } else {
+              label.textContent = `Point ${index}`
+            }
+            row.appendChild(label)
+
+            const inputGroup = document.createElement('div')
+            inputGroup.className = 'segment-time-group'
+            const input = document.createElement('input')
+            input.type = 'text'
+            input.className = 'cutpoint-input'
+            input.value = formatTime(time)
+            input.placeholder = 'mm:ss or 0'
+            input.addEventListener('input', () => {
+              readCutPointsFromUI()
+              renderTimeline()
+            })
+            inputGroup.appendChild(input)
+
+            const setBtn = document.createElement('button')
+            setBtn.type = 'button'
+            setBtn.className = 'segment-set-btn'
+            setBtn.title = 'Set from current video time'
+            setBtn.textContent = '📍'
+            setBtn.addEventListener('click', () => {
+              if (videoElement && videoElement.readyState >= 2) {
+                input.value = formatTime(videoElement.currentTime)
+                readCutPointsFromUI()
+                renderTimeline()
+              }
+            })
+            inputGroup.appendChild(setBtn)
+            row.appendChild(inputGroup)
+
+            // Don't allow removing first or last point (keep start/end)
+            if (cutPoints.length > 2 && index > 0 && index < cutPoints.length - 1) {
+              const removeBtn = document.createElement('button')
+              removeBtn.type = 'button'
+              removeBtn.className = 'segment-remove-btn'
+              removeBtn.innerHTML = '×'
+              removeBtn.title = 'Remove this cut point'
+              removeBtn.addEventListener('click', () => {
+                removeCutPoint(index)
+              })
+              row.appendChild(removeBtn)
+            }
+
+            segmentList.appendChild(row)
+          })
+        } else {
+          // Explicit mode
+          if (explicitSegments.length === 0) {
+            const msg = document.createElement('div')
+            msg.className = 'empty-segments-msg'
+            msg.textContent = 'No segments defined. Click "+ Add" to add a segment.'
+            segmentList.appendChild(msg)
+            return
+          }
+
+          explicitSegments.forEach((seg, index) => {
+            const row = document.createElement('div')
+            row.className = 'segment-row'
+            row.dataset.id = seg.id
+
+            const label = document.createElement('span')
+            label.className = 'segment-label'
+            label.textContent = `Seg ${index + 1}`
+            row.appendChild(label)
+
+            // Start input
+            const startGroup = document.createElement('div')
+            startGroup.className = 'segment-time-group'
+            const startLabel = document.createElement('label')
+            startLabel.textContent = 'Start'
+            startGroup.appendChild(startLabel)
+            const startInput = document.createElement('input')
+            startInput.type = 'text'
+            startInput.className = 'seg-start-input'
+            startInput.value = formatTime(seg.start)
+            startInput.placeholder = 'mm:ss or 0'
+            startInput.addEventListener('input', () => {
+              readExplicitSegmentsFromUI()
+              renderTimeline()
+            })
+            startGroup.appendChild(startInput)
+            const startSetBtn = document.createElement('button')
+            startSetBtn.type = 'button'
+            startSetBtn.className = 'segment-set-btn'
+            startSetBtn.title = 'Set from current video time'
+            startSetBtn.textContent = '📍'
+            startSetBtn.addEventListener('click', () => {
+              if (videoElement && videoElement.readyState >= 2) {
+                startInput.value = formatTime(videoElement.currentTime)
+                readExplicitSegmentsFromUI()
+                renderTimeline()
+              }
+            })
+            startGroup.appendChild(startSetBtn)
+            row.appendChild(startGroup)
+
+            // End input
+            const endGroup = document.createElement('div')
+            endGroup.className = 'segment-time-group'
+            const endLabel = document.createElement('label')
+            endLabel.textContent = 'End'
+            endGroup.appendChild(endLabel)
+            const endInput = document.createElement('input')
+            endInput.type = 'text'
+            endInput.className = 'seg-end-input'
+            endInput.value = formatTime(seg.end)
+            endInput.placeholder = 'mm:ss or 0'
+            endInput.addEventListener('input', () => {
+              readExplicitSegmentsFromUI()
+              renderTimeline()
+            })
+            endGroup.appendChild(endInput)
+            const endSetBtn = document.createElement('button')
+            endSetBtn.type = 'button'
+            endSetBtn.className = 'segment-set-btn'
+            endSetBtn.title = 'Set from current video time'
+            endSetBtn.textContent = '📍'
+            endSetBtn.addEventListener('click', () => {
+              if (videoElement && videoElement.readyState >= 2) {
+                endInput.value = formatTime(videoElement.currentTime)
+                readExplicitSegmentsFromUI()
+                renderTimeline()
+              }
+            })
+            endGroup.appendChild(endSetBtn)
+            row.appendChild(endGroup)
+
+            const removeBtn = document.createElement('button')
+            removeBtn.type = 'button'
+            removeBtn.className = 'segment-remove-btn'
+            removeBtn.innerHTML = '×'
+            removeBtn.title = 'Remove this segment'
+            removeBtn.addEventListener('click', () => {
+              removeExplicitSegment(seg.id)
+            })
+            row.appendChild(removeBtn)
+
+            segmentList.appendChild(row)
+          })
+        }
+      }
+
+      // Render colored segment blocks on the timeline bar
+      function renderTimeline() {
+        // Hide timeline if video is not loaded
+        if (!videoElement || videoElement.readyState < 2) {
+          timelineSection.classList.add('hidden')
+          return
+        }
+
+        const duration = videoElement.duration
+        if (duration <= 0) {
+          timelineSection.classList.add('hidden')
+          return
+        }
+
+        const segs = getSegments()
+        if (segs.length === 0) {
+          timelineSection.classList.add('hidden')
+          return
+        }
+
+        timelineSection.classList.remove('hidden')
+        timelineSegments.innerHTML = ''
+
+        timelineStartLabel.textContent = formatTime(0)
+        timelineEndLabel.textContent = formatTime(duration)
+
+        segs.forEach((seg, index) => {
+          const clampedStart = Math.max(0, seg.start)
+          const clampedEnd = Math.min(duration, seg.end)
+          if (clampedEnd <= clampedStart) return
+
+          const leftPercent = (clampedStart / duration) * 100
+          const widthPercent = ((clampedEnd - clampedStart) / duration) * 100
+          const color = getSegmentColor(index)
+
+          const el = document.createElement('div')
+          el.className = 'timeline-segment'
+          el.style.left = leftPercent + '%'
+          el.style.width = widthPercent + '%'
+          el.style.background = color.fill
+          el.style.borderColor = color.border
+          el.title = `Segment ${index + 1}: ${formatTime(clampedStart)} - ${formatTime(clampedEnd)}`
+
+          const label = document.createElement('span')
+          label.className = 'timeline-segment-label'
+          label.textContent = index + 1
+          el.appendChild(label)
+
+          el.addEventListener('click', () => {
+            if (videoElement) {
+              videoElement.currentTime = clampedStart
+              videoElement.play()
+              const handler = () => {
+                if (videoElement.currentTime >= clampedEnd) {
+                  videoElement.pause()
+                  videoElement.removeEventListener('timeupdate', handler)
+                }
+              }
+              videoElement.addEventListener('timeupdate', handler)
+            }
+          })
+
+          timelineSegments.appendChild(el)
+        })
+      }
+
+      // Initialize with a single default segment covering the full video
+      function initSegmentsForVideo() {
+        const duration = videoElement.duration
+        // Set cut points from start to end
+        cutPoints = [0, duration]
+        // Set explicit segment covering full duration
+        explicitSegments = [{
+          id: ++segmentIdCounter,
+          start: 0,
+          end: duration,
+        }]
+        renderSegmentsUI()
+        renderTimeline()
       }
 
       function handleVideoFile(file) {
@@ -737,18 +1342,11 @@
         // Update label to match current mode (handles Firefox stored values)
         updateValueLabel()
 
-        // Reset time range inputs
-        startTime.value = '00:00'
-        endTime.value = '0'
-
-        // Update placeholder and set end time when video metadata loads
+        // Initialize segments when video metadata loads
         video.addEventListener(
           'loadedmetadata',
           () => {
-            const duration = video.duration
-            endTime.placeholder = `0 = end (${formatTime(duration)})`
-            // Auto-set end time to video duration
-            endTime.value = formatTime(duration)
+            initSegmentsForVideo()
           },
           { once: true },
         )
@@ -822,7 +1420,8 @@
         const frameNumber = document.createElement('div')
         frameNumber.className = 'frame-number'
         const manualLabel = frame.isManual ? ' - Manual' : ''
-        frameNumber.textContent = `Frame ${frameIndex} (${formatTime(frame.time)})${manualLabel}`
+        const segLabel = frame.segmentIndex ? ` Seg${frame.segmentIndex}` : ''
+        frameNumber.textContent = `Frame ${frameIndex} (${formatTime(frame.time)})${segLabel}${manualLabel}`
         previewItem.appendChild(frameNumber)
 
         return previewItem
@@ -891,7 +1490,8 @@
             const frameNumber = previewItem.querySelector('.frame-number')
             if (frameNumber) {
               const manualLabel = frame.isManual ? ' - Manual' : ''
-              frameNumber.textContent = `Frame ${newIndex} (${formatTime(frame.time)})${manualLabel}`
+              const segLabel = frame.segmentIndex ? ` Seg${frame.segmentIndex}` : ''
+              frameNumber.textContent = `Frame ${newIndex} (${formatTime(frame.time)})${segLabel}${manualLabel}`
             }
           }
         })
@@ -1006,38 +1606,39 @@
           return
         }
 
-        // Parse time inputs
-        const start = parseTimeInput(startTime.value)
-        const end = parseTimeInput(endTime.value)
+        // Read current segment data from UI
+        readCutPointsFromUI()
+        readExplicitSegmentsFromUI()
+        const segs = getSegments()
 
-        if (start === null) {
-          showError(
-            'Invalid start time format. Use mm:ss, mm:ss.sss, or seconds',
-          )
+        if (segs.length === 0) {
+          showError('No segments defined. Add at least one segment.')
           extractBtn.disabled = false
           stopBtn.classList.add('hidden')
           progress.classList.remove('active')
           return
         }
 
-        if (end === null) {
-          showError('Invalid end time format. Use mm:ss, mm:ss.sss, or seconds')
-          extractBtn.disabled = false
-          stopBtn.classList.add('hidden')
-          progress.classList.remove('active')
-          return
-        }
-
-        if (start < 0) {
-          showError('Start time cannot be negative')
-          extractBtn.disabled = false
-          stopBtn.classList.add('hidden')
-          progress.classList.remove('active')
-          return
+        // Validate segments
+        for (const seg of segs) {
+          if (seg.start < 0) {
+            showError('Start time cannot be negative')
+            extractBtn.disabled = false
+            stopBtn.classList.add('hidden')
+            progress.classList.remove('active')
+            return
+          }
+          if (seg.end <= seg.start) {
+            showError('End time must be greater than start time in each segment')
+            extractBtn.disabled = false
+            stopBtn.classList.add('hidden')
+            progress.classList.remove('active')
+            return
+          }
         }
 
         try {
-          await extractFrames(mode, value, start, end)
+          await extractFrames(mode, value, segs)
         } catch (error) {
           showError('Error extracting frames: ' + error.message)
           extractBtn.disabled = false
@@ -1053,7 +1654,7 @@
         stopBtn.textContent = '⏹ Stopping...'
       })
 
-      async function extractFrames(mode, value, startTime = 0, endTime = 0) {
+      async function extractFrames(mode, value, segments) {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
 
@@ -1072,47 +1673,67 @@
         canvas.width = videoElement.videoWidth
         canvas.height = videoElement.videoHeight
 
-        // Determine actual start and end times
-        const start = Math.max(0, Math.min(startTime, duration))
-        const end = endTime > 0 ? Math.min(endTime, duration) : duration
+        // Generate frame times for all segments
+        let frameSamples = [] // { time, segmentIndex }[]
 
-        if (end <= start) {
-          throw new Error('End time must be greater than start time')
+        for (let segIdx = 0; segIdx < segments.length; segIdx++) {
+          const seg = segments[segIdx]
+          const segStart = Math.max(0, Math.min(seg.start, duration))
+          const segEnd = seg.end > 0 ? Math.min(seg.end, duration) : duration
+
+          if (segEnd <= segStart) continue
+
+          const rangeDuration = segEnd - segStart
+          const segTimes = []
+
+          if (mode === 'interval') {
+            // Extract by interval within the time range
+            for (let time = segStart; time < segEnd; time += value) {
+              segTimes.push(Math.min(time, segEnd))
+            }
+            // Make sure we include the end time if it's close
+            if (
+              segTimes.length === 0 ||
+              segTimes[segTimes.length - 1] < segEnd - value / 2
+            ) {
+              segTimes.push(segEnd)
+            }
+          } else {
+            // Extract by total count within the time range
+            const interval = rangeDuration / (value + 1)
+            for (let i = 1; i <= value; i++) {
+              segTimes.push(segStart + i * interval)
+            }
+          }
+
+          for (const time of segTimes) {
+            frameSamples.push({ time, segmentIndex: segIdx })
+          }
         }
 
-        const rangeDuration = end - start
-        let frameTimes = []
+        // Deduplicate boundary overlaps when segments are adjacent
+        const seen = new Set()
+        frameSamples = frameSamples.filter(s => {
+          const key = Math.round(s.time * 1000)
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        frameSamples.sort((a, b) => a.time - b.time)
 
-        if (mode === 'interval') {
-          // Extract by interval within the time range
-          for (let time = start; time < end; time += value) {
-            frameTimes.push(Math.min(time, end))
-          }
-          // Make sure we include the end time if it's close
-          if (
-            frameTimes.length === 0 ||
-            frameTimes[frameTimes.length - 1] < end - value / 2
-          ) {
-            frameTimes.push(end)
-          }
-        } else {
-          // Extract by total count within the time range
-          const interval = rangeDuration / (value + 1)
-          for (let i = 1; i <= value; i++) {
-            frameTimes.push(start + i * interval)
-          }
-        }
+        // Track per-segment frame count for 0-based per-segment frame index
+        const segFrameCounts = new Array(segments.length).fill(0)
 
-        const totalFrames = frameTimes.length
+        const totalFrames = frameSamples.length
 
-        for (let i = 0; i < frameTimes.length; i++) {
+        for (let i = 0; i < frameSamples.length; i++) {
           // Check if extraction should be stopped
           if (shouldStopExtraction) {
             progressFill.textContent = 'Stopped'
             break
           }
 
-          const time = frameTimes[i]
+          const { time, segmentIndex } = frameSamples[i]
 
           // Seek to frame time
           videoElement.currentTime = time
@@ -1136,13 +1757,17 @@
             canvas.toBlob(resolve, 'image/jpeg', 0.9)
           })
 
-          const frameIndex = extractedFrames.length + 1
+          const globalIndex = extractedFrames.length + 1
+          const segFrameIndex = segFrameCounts[segmentIndex] || 0
+          segFrameCounts[segmentIndex] = segFrameIndex + 1
           const frame = {
             id: ++frameIdCounter,
             blob: blob,
             time: time,
-            index: frameIndex,
+            index: globalIndex,
             isManual: false,
+            segmentIndex: segmentIndex,
+            segmentFrameIndex: segFrameIndex,
           }
           extractedFrames.push(frame)
 
@@ -1152,7 +1777,7 @@
           progressFill.textContent = Math.round(progressPercent) + '%'
 
           // Show preview
-          const previewItem = createPreviewItem(frame, frameIndex)
+          const previewItem = createPreviewItem(frame, globalIndex)
           previewGrid.appendChild(previewItem)
         }
 
@@ -1181,19 +1806,22 @@
 
           for (let i = 0; i < extractedFrames.length; i++) {
             const frame = extractedFrames[i]
-            // Format time as mm-ss.sss (minutes-seconds.milliseconds)
-            const totalSeconds = frame.time
-            const mins = Math.floor(totalSeconds / 60)
-            const secs = totalSeconds % 60
+            const totalSecs = frame.time
+            const hrs = Math.floor(totalSecs / 3600)
+            const mins = Math.floor((totalSecs % 3600) / 60)
+            const secs = totalSecs % 60
             const secsInt = Math.floor(secs)
-            const milliseconds = Math.round((secs - secsInt) * 1000)
-            const timeStr = `${String(mins).padStart(2, '0')}-${String(
-              secsInt,
-            ).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`
-
+            const ms = Math.round((secs - secsInt) * 1000)
+            const timeStr = `${String(hrs).padStart(2, '0')}.${String(mins).padStart(2, '0')}.${String(secsInt).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
+            const displayIndex = frame.index + 1
+            const hasSegment = frame.segmentIndex !== undefined
             const filename = videoFileName
-              ? `${videoFileName}_${timeStr}.jpg`
-              : `frame_${String(frame.index).padStart(4, '0')}_${timeStr}.jpg`
+              ? hasSegment
+                ? `${videoFileName}_seg${frame.segmentIndex}_frame${displayIndex}_${timeStr}.jpg`
+                : `${videoFileName}_frame${displayIndex}_${timeStr}.jpg`
+              : hasSegment
+                ? `frame_seg${frame.segmentIndex}_f${displayIndex}_${timeStr}.jpg`
+                : `frame_${String(displayIndex).padStart(4, '0')}_${timeStr}.jpg`
             zip.file(filename, frame.blob)
           }
 
@@ -1237,6 +1865,27 @@
         updateFrameCount()
         downloadBtn.disabled = true
         previewSection.classList.add('hidden')
+      })
+
+      // Handle segment mode toggle (Cutting Points / Explicit)
+      document.querySelectorAll('.segment-mode-toggle label').forEach(label => {
+        label.addEventListener('click', () => {
+          const mode = label.dataset.mode
+          if (mode === 'points') {
+            switchToPointsMode()
+          } else {
+            switchToExplicitMode()
+          }
+        })
+      })
+
+      // Add new segment or cut point depending on current mode
+      addSegmentBtn.addEventListener('click', () => {
+        if (segmentMode === 'points') {
+          addCutPoint()
+        } else {
+          addExplicitSegment()
+        }
       })
     </script>
   </body>
