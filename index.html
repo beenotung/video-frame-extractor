@@ -757,21 +757,6 @@
           <div class="segment-list" id="segmentList"></div>
           <button type="button" class="add-segment-btn" id="addSegmentBottomBtn">+ Add Segment</button>
         </div>
-        <div class="control-buttons">
-          <div class="buttons-row">
-            <button class="extract-btn" id="extractBtn" disabled>
-              Extract Frames
-            </button>
-            <button class="stop-btn hidden" id="stopBtn">
-              ⏹ Stop Extraction
-            </button>
-          </div>
-          <div class="progress hidden" id="progress">
-            <div class="progress-bar">
-              <div class="progress-fill" id="progressFill">0%</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div class="video-preview hidden" id="videoPreview">
@@ -792,6 +777,22 @@
         <button class="snapshot-btn" id="snapshotBtn">
           📸 Capture Current Frame (Press C)
         </button>
+      </div>
+
+      <div class="control-buttons hidden">
+        <div class="buttons-row">
+          <button class="extract-btn" id="extractBtn" disabled>
+            Extract Frames
+          </button>
+          <button class="stop-btn hidden" id="stopBtn">
+            ⏹ Stop Extraction
+          </button>
+        </div>
+        <div class="progress hidden" id="progress">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill">0%</div>
+          </div>
+        </div>
       </div>
 
       <div id="error" class="error hidden"></div>
