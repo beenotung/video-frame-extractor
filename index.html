@@ -981,6 +981,12 @@
         }
       }
 
+      function scrollByRow(dir) {
+        const row = segmentList.querySelector('.segment-row')
+        if (!row) return
+        window.scrollBy({ top: dir * (row.offsetHeight + 10) })
+      }
+
       function addCutPoint(time) {
         if (time === undefined || time === null) {
           if (!videoElement || videoElement.readyState < 2) return
@@ -993,7 +999,7 @@
         cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
         renderSegmentsUI()
         renderTimeline()
-        videoElement.scrollIntoView({ block: 'end' })
+        scrollByRow(1)
       }
 
       function removeCutPoint(index) {
@@ -1001,6 +1007,7 @@
         cutPoints.splice(index, 1)
         renderSegmentsUI()
         renderTimeline()
+        scrollByRow(-1)
       }
 
       function addExplicitSegment(start, end) {
@@ -1021,13 +1028,14 @@
         })
         renderSegmentsUI()
         renderTimeline()
-        videoElement.scrollIntoView({ block: 'end' })
+        scrollByRow(1)
       }
 
       function removeExplicitSegment(id) {
         explicitSegments = explicitSegments.filter(s => s.id !== id)
         renderSegmentsUI()
         renderTimeline()
+        scrollByRow(-1)
       }
 
       // Read start/end values from explicit segment input fields
