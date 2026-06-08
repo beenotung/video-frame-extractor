@@ -604,12 +604,51 @@
       }
 
       /* Timeline */
+      .scene-chart-section {
+        margin: 0;
+        padding: 0 15px;
+        background: #f0f0f5;
+        border-left: 1px solid #e0e0e0;
+        border-right: 1px solid #e0e0e0;
+      }
+
+      .scene-chart-btn {
+        display: block;
+        margin: 6px auto;
+        padding: 4px 14px;
+        border: 1px solid #667eea;
+        background: #fff;
+        color: #667eea;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .scene-chart-btn:hover {
+        background: #667eea;
+        color: #fff;
+      }
+
+      .scene-chart-loading {
+        font-size: 11px;
+        color: #888;
+        text-align: center;
+        padding: 10px 0;
+      }
+
+      #sceneChartCanvas {
+        display: block;
+        width: 100%;
+        height: 50px;
+      }
+
       .timeline-section {
-        margin: 20px 0;
+        margin: 0 0 20px 0;
         padding: 15px;
         background: #f8f9ff;
-        border-radius: 8px;
+        border-radius: 0 0 8px 8px;
         border: 1px solid #e0e0e0;
+        border-top: none;
       }
 
       .timeline-bar-container {
@@ -797,6 +836,12 @@
         <video id="video" controls></video>
       </div>
 
+      <div class="scene-chart-section hidden" id="sceneChartSection">
+        <button class="scene-chart-btn" id="analyzeScenesBtn">📊 Analyze Scenes</button>
+        <div class="scene-chart-loading hidden" id="sceneChartLoading">Analyzing scenes...</div>
+        <canvas id="sceneChartCanvas" height="50"></canvas>
+      </div>
+
       <div class="timeline-section hidden" id="timelineSection">
         <div class="timeline-bar-container" id="timelineBarContainer">
           <div id="timelineSegments"></div>
@@ -859,6 +904,8 @@
       let cutPoints = []
       let explicitSegments = []
       let segmentIdCounter = 0
+      let sceneDeltas = [] // { time, delta } array, delta normalized 0-1
+      let isAnalyzing = false
 
       const uploadSection = document.getElementById('uploadSection')
       const videoInput = document.getElementById('videoInput')
@@ -886,6 +933,10 @@
       const timelineStartLabel = document.getElementById('timelineStartLabel')
       const timelineEndLabel = document.getElementById('timelineEndLabel')
       const timelinePlayhead = document.getElementById('timelinePlayhead')
+      const sceneChartSection = document.getElementById('sceneChartSection')
+      const sceneChartCanvas = document.getElementById('sceneChartCanvas')
+      const sceneChartLoading = document.getElementById('sceneChartLoading')
+      const analyzeScenesBtn = document.getElementById('analyzeScenesBtn')
       const exportSegmentsBtn = document.getElementById('exportSegmentsBtn')
       const importSegmentsBtn = document.getElementById('importSegmentsBtn')
       const importFileInput = document.getElementById('importFileInput')
@@ -1328,6 +1379,187 @@
         const pct = (videoElement.currentTime / videoElement.duration) * 100
         timelinePlayhead.style.left = pct + '%'
         timelinePlayhead.style.display = 'block'
+        renderSceneChart()
+      }
+
+      // Analyze scene changes by computing pixel delta between sampled frames
+      function getAnalysisInterval(duration) {
+        if (duration <= 120) return 0.5
+        if (duration <= 600) return 1
+        return 2
+      }
+
+      async function analyzeSceneChanges() {
+        if (!videoElement || videoElement.readyState < 2 || videoElement.duration <= 0) return
+        if (isAnalyzing) return
+        isAnalyzing = true
+        sceneDeltas = []
+        sceneChartCanvas.width = sceneChartCanvas.width
+
+        const duration = videoElement.duration
+        const interval = getAnalysisInterval(duration)
+        const samples = []
+        const offscreen = document.createElement('canvas')
+        const w = 80
+        const vw = videoElement.videoWidth
+        const vh = videoElement.videoHeight
+        const h = vw > 0 && vh > 0 ? Math.round(w / (vw / vh)) : 45
+        offscreen.width = w
+        offscreen.height = h
+        const ctx = offscreen.getContext('2d')
+        let prevData = null
+
+        analyzeScenesBtn.classList.add('hidden')
+        sceneChartLoading.classList.remove('hidden')
+
+        try {
+          // Sample the video at regular intervals
+          let lastTime = 0
+          for (let t = 0; t < duration; t += interval) {
+            // Yield to let UI update
+            if (t - lastTime >= 10) {
+              await new Promise(r => setTimeout(r, 0))
+              lastTime = t
+            }
+
+            videoElement.currentTime = t
+            await new Promise(resolve => {
+              const handler = () => {
+                videoElement.removeEventListener('seeked', handler)
+                resolve()
+              }
+              videoElement.addEventListener('seeked', handler)
+              // Fallback if seek is instant
+              setTimeout(resolve, 100)
+            })
+
+            ctx.drawImage(videoElement, 0, 0, w, h)
+            const imageData = ctx.getImageData(0, 0, w, h)
+            const pixels = imageData.data
+
+            if (prevData) {
+              // Compute sum of absolute differences per pixel (average across RGB)
+              let totalDiff = 0
+              for (let i = 0; i < pixels.length; i += 4) {
+                const dr = Math.abs(pixels[i] - prevData[i])
+                const dg = Math.abs(pixels[i + 1] - prevData[i + 1])
+                const db = Math.abs(pixels[i + 2] - prevData[i + 2])
+                totalDiff += (dr + dg + db) / 3
+              }
+              const avgDiff = totalDiff / (w * h)
+              samples.push({ time: t, delta: avgDiff })
+            } else {
+              samples.push({ time: t, delta: 0 })
+            }
+
+            prevData = new Uint8Array(pixels)
+          }
+
+          // Restore video to start
+          videoElement.currentTime = 0
+
+          // Normalize deltas to 0-1 relative to max
+          let maxDelta = 0
+          for (const s of samples) {
+            if (s.delta > maxDelta) maxDelta = s.delta
+          }
+          sceneDeltas = samples.map(s => ({
+            time: s.time,
+            delta: maxDelta > 0 ? s.delta / maxDelta : 0,
+          }))
+        } catch (e) {
+          console.warn('Scene analysis failed:', e)
+        }
+
+        sceneChartLoading.classList.add('hidden')
+        if (sceneDeltas.length > 0) {
+          renderSceneChart()
+        } else {
+          analyzeScenesBtn.classList.remove('hidden')
+        }
+        isAnalyzing = false
+      }
+
+      function renderSceneChart() {
+        if (sceneDeltas.length === 0) return
+        if (sceneChartSection.classList.contains('hidden')) return
+        const canvas = sceneChartCanvas
+        const rect = canvas.parentElement.getBoundingClientRect()
+        const w = rect.width
+        const h = canvas.height
+        canvas.width = w * devicePixelRatio
+        canvas.height = h * devicePixelRatio
+        const ctx = canvas.getContext('2d')
+        ctx.scale(devicePixelRatio, devicePixelRatio)
+
+        // Clear
+        ctx.clearRect(0, 0, w, h)
+
+        const padding = 2
+        const chartTop = padding
+        const chartBottom = h - padding
+        const chartHeight = chartBottom - chartTop
+
+        if (sceneDeltas.length < 2) return
+
+        const duration = videoElement ? videoElement.duration : sceneDeltas[sceneDeltas.length - 1].time
+        const xScale = w / duration
+
+        // Draw filled area
+        ctx.beginPath()
+        ctx.moveTo(0, chartBottom)
+        for (const s of sceneDeltas) {
+          const x = s.time * xScale
+          const y = chartBottom - s.delta * chartHeight
+          ctx.lineTo(x, y)
+        }
+        ctx.lineTo(w, chartBottom)
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(102, 126, 234, 0.15)'
+        ctx.fill()
+
+        // Draw line
+        ctx.beginPath()
+        for (let i = 0; i < sceneDeltas.length; i++) {
+          const x = sceneDeltas[i].time * xScale
+          const y = chartBottom - sceneDeltas[i].delta * chartHeight
+          if (i === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
+        ctx.strokeStyle = '#667eea'
+        ctx.lineWidth = 1
+        ctx.stroke()
+
+        // Draw segment boundaries as vertical lines
+        const segs = getSegments()
+        for (const seg of segs) {
+          const x1 = seg.start * xScale
+          const x2 = seg.end * xScale
+          ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+          ctx.lineWidth = 1
+          ctx.setLineDash([3, 3])
+          ctx.beginPath()
+          ctx.moveTo(x1, chartTop)
+          ctx.lineTo(x1, chartBottom)
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.moveTo(x2, chartTop)
+          ctx.lineTo(x2, chartBottom)
+          ctx.stroke()
+          ctx.setLineDash([])
+        }
+
+        // Draw playhead
+        if (videoElement && videoElement.duration > 0) {
+          const playheadX = (videoElement.currentTime / videoElement.duration) * w
+          ctx.strokeStyle = '#ff4444'
+          ctx.lineWidth = 2
+          ctx.setLineDash([])
+          ctx.beginPath()
+          ctx.moveTo(playheadX, chartTop)
+          ctx.lineTo(playheadX, chartBottom)
+          ctx.stroke()
+        }
       }
 
       // Render colored segment blocks on the timeline bar
@@ -1335,6 +1567,7 @@
         // Hide timeline if video is not loaded
         if (!videoElement || videoElement.readyState < 2) {
           timelineSection.classList.add('hidden')
+          sceneChartSection.classList.add('hidden')
           timelinePlayhead.style.display = 'none'
           return
         }
@@ -1342,6 +1575,7 @@
         const duration = videoElement.duration
         if (duration <= 0) {
           timelineSection.classList.add('hidden')
+          sceneChartSection.classList.add('hidden')
           timelinePlayhead.style.display = 'none'
           return
         }
@@ -1349,11 +1583,13 @@
         const segs = getSegments()
         if (segs.length === 0) {
           timelineSection.classList.add('hidden')
+          sceneChartSection.classList.add('hidden')
           timelinePlayhead.style.display = 'none'
           return
         }
 
         timelineSection.classList.remove('hidden')
+        sceneChartSection.classList.remove('hidden')
         timelinePlayhead.style.display = 'block'
         timelineSegments.innerHTML = ''
 
@@ -1399,6 +1635,8 @@
 
           timelineSegments.appendChild(el)
         })
+
+        renderSceneChart()
       }
 
       // Initialize with a single default segment covering the full video
@@ -1475,18 +1713,13 @@
         reader.readAsText(file)
       }
 
-      function handleVideoFile(file) {
-        videoFile = file
-        // Store original filename without extension
-        const fileName = file.name
-        const lastDot = fileName.lastIndexOf('.')
-        videoFileName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName
-        // Sanitize filename (remove special characters, keep only alphanumeric, dash, underscore)
-        videoFileName = videoFileName.replace(/[/\\?%*:|"<>]/g, '_')
-
-        const url = URL.createObjectURL(file)
-        video.src = url
-        videoElement = video
+      function setupVideoUI() {
+        // Reset scene chart for new video
+        sceneDeltas = []
+        isAnalyzing = false
+        sceneChartLoading.classList.add('hidden')
+        analyzeScenesBtn.classList.remove('hidden')
+        sceneChartCanvas.width = sceneChartCanvas.width
 
         videoPreview.classList.remove('hidden')
         snapshotSection.classList.remove('hidden')
@@ -1511,20 +1744,26 @@
         video.removeEventListener('timeupdate', updateTimelinePlayhead)
         video.addEventListener('timeupdate', updateTimelinePlayhead)
 
-        timelineBarContainer.addEventListener('click', e => {
-          if (e.target.closest('.timeline-segment')) return
-          const rect = timelineBarContainer.getBoundingClientRect()
-          const pct = (e.clientX - rect.left) / rect.width
-          if (videoElement) {
-            videoElement.currentTime = pct * videoElement.duration
-          }
-        })
-
         // Reset previous extraction
         extractedFrames = []
         updateFrameCount()
         previewSection.classList.add('hidden')
         downloadBtn.disabled = true
+      }
+
+      function handleVideoFile(file) {
+        videoFile = file
+        // Store original filename without extension
+        const fileName = file.name
+        const lastDot = fileName.lastIndexOf('.')
+        videoFileName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName
+        // Sanitize filename (remove special characters, keep only alphanumeric, dash, underscore)
+        videoFileName = videoFileName.replace(/[/\\?%*:|"<>]/g, '_')
+
+        const url = URL.createObjectURL(file)
+        video.src = url
+        videoElement = video
+        setupVideoUI()
       }
 
       async function triggerCapture() {
@@ -2086,6 +2325,26 @@
           videoElement.currentTime = pct * videoElement.duration
         }
       })
+
+      // Click on scene chart to seek
+      sceneChartCanvas.addEventListener('click', e => {
+        const rect = sceneChartCanvas.getBoundingClientRect()
+        const pct = (e.clientX - rect.left) / rect.width
+        if (videoElement) {
+          videoElement.currentTime = pct * videoElement.duration
+        }
+      })
+
+      // Analyze scenes button
+      analyzeScenesBtn.addEventListener('click', analyzeSceneChanges)
+
+      // Re-render scene chart on window resize
+      window.addEventListener('resize', () => renderSceneChart())
+
+      // Handle Firefox restoring video file across refresh
+      if (videoInput.files.length > 0) {
+        handleVideoFile(videoInput.files[0])
+      }
     </script>
   </body>
 </html>
