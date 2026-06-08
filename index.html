@@ -603,6 +603,19 @@
         padding: 10px;
       }
 
+      kbd {
+        display: inline-block;
+        min-width: 1.2em;
+        padding: 1px 5px;
+        font: 11px monospace;
+        text-align: center;
+        border: 1px solid #bbb;
+        border-radius: 3px;
+        background: #f7f7f7;
+        color: #333;
+        box-shadow: 0 1px 0 #bbb;
+      }
+
       /* Timeline */
       .scene-chart-section {
         margin: 0;
@@ -828,7 +841,8 @@
             <input type="file" id="importFileInput" accept=".json" hidden />
           </div>
           <div class="segment-list" id="segmentList"></div>
-          <button type="button" class="add-segment-btn" id="addSegmentBottomBtn">+ Add Segment</button>
+          <button type="button" class="add-segment-btn" id="addSegmentBottomBtn">+ Add Segment <kbd>A</kbd></button>
+          <div style="font-size:11px;color:#999;padding:4px 0 0 0;text-align:center"><kbd>S</kbd> set start &nbsp; <kbd>E</kbd> set end</div>
         </div>
       </div>
 
@@ -855,7 +869,7 @@
 
       <div class="snapshot-section hidden" id="snapshotSection">
         <button class="snapshot-btn" id="snapshotBtn">
-          📸 Capture Current Frame (Press C)
+          📸 Capture Current Frame <kbd>C</kbd>
         </button>
       </div>
 
@@ -1099,8 +1113,10 @@
       }
 
       function addExplicitSegment(start, end) {
-        // Default to start of video
-        if (start === undefined) start = 0
+        // Default to current video time
+        if (start === undefined || start === null) {
+          start = videoElement && videoElement.readyState >= 2 ? videoElement.currentTime : 0
+        }
         // Default to end of video if no end specified
         if (end === undefined || end === null) {
           if (videoElement && videoElement.readyState >= 2) {
@@ -1124,6 +1140,51 @@
         renderSegmentsUI()
         renderTimeline()
         scrollByRow(-1)
+      }
+
+      // Keyboard helpers for setting segment start/end
+      function setCutPointStart() {
+        if (!videoElement || videoElement.readyState < 2) return
+        if (cutPoints.length === 0) return
+        cutPoints[0] = videoElement.currentTime
+        cutPoints.sort((a, b) => a - b)
+        cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      function setCutPointEnd() {
+        if (!videoElement || videoElement.readyState < 2) return
+        if (cutPoints.length === 0) return
+        cutPoints[cutPoints.length - 1] = videoElement.currentTime
+        cutPoints.sort((a, b) => a - b)
+        cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      function setExplicitStart() {
+        if (!videoElement || videoElement.readyState < 2) return
+        if (explicitSegments.length === 0) return
+        const seg = explicitSegments[explicitSegments.length - 1]
+        seg.start = videoElement.currentTime
+        if (seg.start > seg.end) {
+          seg.start = seg.end
+        }
+        renderSegmentsUI()
+        renderTimeline()
+      }
+
+      function setExplicitEnd() {
+        if (!videoElement || videoElement.readyState < 2) return
+        if (explicitSegments.length === 0) return
+        const seg = explicitSegments[explicitSegments.length - 1]
+        seg.end = videoElement.currentTime
+        if (seg.start > seg.end) {
+          seg.end = seg.start
+        }
+        renderSegmentsUI()
+        renderTimeline()
       }
 
       // Read start/end values from explicit segment input fields
@@ -1781,22 +1842,60 @@
 
       snapshotBtn.addEventListener('click', triggerCapture)
 
-      // Keyboard shortcut: Press 'C' to capture frame
+      // Keyboard shortcuts: C=capture, A=add segment/point, S=set start, E=set end
       // Note: Left/Right arrows and Spacebar work by default for video controls
       document.addEventListener('keydown', async e => {
-        // Only handle capture key, let browser handle arrow keys and spacebar by default
+        if (e.ctrlKey || e.metaKey || e.altKey) return
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+
+        // Capture current frame
         if (
           (e.key === 'c' || e.key === 'C') &&
-          !e.ctrlKey &&
-          !e.metaKey &&
-          !e.altKey &&
-          e.target.tagName !== 'INPUT' &&
-          e.target.tagName !== 'TEXTAREA' &&
           !snapshotSection.classList.contains('hidden')
         ) {
           e.preventDefault()
           await triggerCapture()
+          return
         }
+
+        // Segment shortcuts (only when controls section is visible)
+        if (!controls.classList.contains('hidden')) {
+          if (segmentMode === 'points') {
+            if (e.key === 'a' || e.key === 'A') {
+              e.preventDefault()
+              addCutPoint()
+              return
+            }
+            if (e.key === 's' || e.key === 'S') {
+              e.preventDefault()
+              setCutPointStart()
+              return
+            }
+            if (e.key === 'e' || e.key === 'E') {
+              e.preventDefault()
+              setCutPointEnd()
+              return
+            }
+          }
+          if (segmentMode === 'explicit') {
+            if (e.key === 'a' || e.key === 'A') {
+              e.preventDefault()
+              addExplicitSegment()
+              return
+            }
+            if (e.key === 's' || e.key === 'S') {
+              e.preventDefault()
+              setExplicitStart()
+              return
+            }
+            if (e.key === 'e' || e.key === 'E') {
+              e.preventDefault()
+              setExplicitEnd()
+              return
+            }
+          }
+        }
+
         // Don't prevent default for ArrowLeft, ArrowRight, or Space - let browser handle them
       })
 
