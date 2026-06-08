@@ -1143,7 +1143,6 @@
         if (cutPoints.length === 0) return
         cutPoints[0] = videoElement.currentTime
         cutPoints.sort((a, b) => a - b)
-        cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
         renderSegmentsUI()
         renderTimeline()
       }
@@ -1153,7 +1152,6 @@
         if (cutPoints.length === 0) return
         cutPoints[cutPoints.length - 1] = videoElement.currentTime
         cutPoints.sort((a, b) => a - b)
-        cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
         renderSegmentsUI()
         renderTimeline()
       }
