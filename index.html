@@ -354,6 +354,7 @@
         padding: 5px;
         text-align: center;
         font-size: 12px;
+        cursor: pointer;
       }
 
       .preview-item .delete-btn {
@@ -1996,7 +1997,23 @@
         const manualLabel = frame.isManual ? ' - Manual' : ''
         const segIndexDisplay = frame.segmentIndex !== undefined ? frame.segmentIndex + 1 : null
         const segLabel = segIndexDisplay ? ` Seg${segIndexDisplay}` : ''
-        frameNumber.textContent = `Frame ${frameIndex} (${formatTime(frame.time)})${segLabel}${manualLabel}`
+        const timeStr = formatTime(frame.time)
+        const timeSpan = document.createElement('span')
+        timeSpan.textContent = timeStr
+        frameNumber.appendChild(document.createTextNode(`Frame ${frameIndex} (`))
+        frameNumber.appendChild(timeSpan)
+        frameNumber.appendChild(document.createTextNode(`)${segLabel}${manualLabel}`))
+        frameNumber.title = 'Click to copy timestamp'
+        frameNumber.addEventListener('click', () => {
+          navigator.clipboard.writeText(timeStr).catch(() => {})
+          const range = document.createRange()
+          range.selectNodeContents(timeSpan)
+          window.getSelection().removeAllRanges()
+          window.getSelection().addRange(range)
+          timeSpan.style.transition = 'background 0.2s'
+          timeSpan.style.background = 'rgba(102, 126, 234, 0.8)'
+          setTimeout(() => { timeSpan.style.background = '' }, 300)
+        })
         previewItem.appendChild(frameNumber)
 
         return previewItem
