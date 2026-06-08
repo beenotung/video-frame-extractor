@@ -1648,7 +1648,7 @@
       // Render colored segment blocks on the timeline bar
       function renderTimeline() {
         // Hide timeline if video is not loaded
-        if (!videoElement || videoElement.readyState < 2) {
+        if (!videoElement || videoElement.readyState < 1) {
           timelineSection.classList.add('hidden')
           sceneChartSection.classList.add('hidden')
           timelinePlayhead.style.display = 'none'
