@@ -637,6 +637,40 @@
         opacity: 0.8;
       }
 
+      .timeline-playhead {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #ff4444;
+        pointer-events: none;
+        z-index: 10;
+        transform: translateX(-50%);
+        display: none;
+      }
+
+      .timeline-playhead::before,
+      .timeline-playhead::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+      }
+
+      .timeline-playhead::before {
+        top: -4px;
+        border-bottom: 6px solid #ff4444;
+      }
+
+      .timeline-playhead::after {
+        bottom: -4px;
+        border-top: 6px solid #ff4444;
+      }
+
       .timeline-segment-label {
         position: absolute;
         top: 50%;
@@ -766,6 +800,7 @@
       <div class="timeline-section hidden" id="timelineSection">
         <div class="timeline-bar-container" id="timelineBarContainer">
           <div id="timelineSegments"></div>
+          <div class="timeline-playhead" id="timelinePlayhead"></div>
         </div>
         <div class="timeline-labels" id="timelineLabels">
           <span id="timelineStartLabel">0:00</span>
@@ -850,6 +885,7 @@
       const timelineSegments = document.getElementById('timelineSegments')
       const timelineStartLabel = document.getElementById('timelineStartLabel')
       const timelineEndLabel = document.getElementById('timelineEndLabel')
+      const timelinePlayhead = document.getElementById('timelinePlayhead')
       const exportSegmentsBtn = document.getElementById('exportSegmentsBtn')
       const importSegmentsBtn = document.getElementById('importSegmentsBtn')
       const importFileInput = document.getElementById('importFileInput')
@@ -1286,27 +1322,39 @@
         }
       }
 
+      // Update timeline playhead position based on current video time
+      function updateTimelinePlayhead() {
+        if (!videoElement || videoElement.duration <= 0) return
+        const pct = (videoElement.currentTime / videoElement.duration) * 100
+        timelinePlayhead.style.left = pct + '%'
+        timelinePlayhead.style.display = 'block'
+      }
+
       // Render colored segment blocks on the timeline bar
       function renderTimeline() {
         // Hide timeline if video is not loaded
         if (!videoElement || videoElement.readyState < 2) {
           timelineSection.classList.add('hidden')
+          timelinePlayhead.style.display = 'none'
           return
         }
 
         const duration = videoElement.duration
         if (duration <= 0) {
           timelineSection.classList.add('hidden')
+          timelinePlayhead.style.display = 'none'
           return
         }
 
         const segs = getSegments()
         if (segs.length === 0) {
           timelineSection.classList.add('hidden')
+          timelinePlayhead.style.display = 'none'
           return
         }
 
         timelineSection.classList.remove('hidden')
+        timelinePlayhead.style.display = 'block'
         timelineSegments.innerHTML = ''
 
         timelineStartLabel.textContent = formatTime(0)
@@ -1334,7 +1382,8 @@
           label.textContent = index + 1
           el.appendChild(label)
 
-          el.addEventListener('click', () => {
+          el.addEventListener('click', e => {
+            e.stopPropagation()
             if (videoElement) {
               videoElement.currentTime = clampedStart
               videoElement.play()
@@ -1457,6 +1506,19 @@
           },
           { once: true },
         )
+
+        // Update timeline playhead on playback
+        video.removeEventListener('timeupdate', updateTimelinePlayhead)
+        video.addEventListener('timeupdate', updateTimelinePlayhead)
+
+        timelineBarContainer.addEventListener('click', e => {
+          if (e.target.closest('.timeline-segment')) return
+          const rect = timelineBarContainer.getBoundingClientRect()
+          const pct = (e.clientX - rect.left) / rect.width
+          if (videoElement) {
+            videoElement.currentTime = pct * videoElement.duration
+          }
+        })
 
         // Reset previous extraction
         extractedFrames = []
@@ -2012,6 +2074,16 @@
         if (e.target.files.length > 0) {
           importSegments(e.target.files[0])
           e.target.value = '' // allow re-importing the same file
+        }
+      })
+
+      // Click on empty area of timeline bar to seek
+      timelineBarContainer.addEventListener('click', e => {
+        if (e.target.closest('.timeline-segment')) return
+        const rect = timelineBarContainer.getBoundingClientRect()
+        const pct = (e.clientX - rect.left) / rect.width
+        if (videoElement) {
+          videoElement.currentTime = pct * videoElement.duration
         }
       })
     </script>
