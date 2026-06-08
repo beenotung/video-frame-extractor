@@ -597,6 +597,12 @@
         background: #5568d3;
       }
 
+      #addSegmentBottomBtn {
+        margin-top: 10px;
+        width: 100%;
+        padding: 10px;
+      }
+
       /* Timeline */
       .timeline-section {
         margin: 20px 0;
@@ -661,6 +667,34 @@
         font-style: italic;
         font-size: 14px;
       }
+
+      .segment-toolbar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .segment-toolbar-btn {
+        background: #667eea;
+        color: white;
+        padding: 5px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+
+      .segment-toolbar-btn:hover {
+        background: #5568d3;
+      }
+
+
+
+      .toolbar-add-btn:hover {
+        background: #218838;
+      }
     </style>
   </head>
   <body>
@@ -714,15 +748,14 @@
                 Explicit
               </label>
             </div>
-            <button
-              type="button"
-              class="add-segment-btn"
-              id="addSegmentBtn"
-            >
-              + Add
-            </button>
+          </div>
+          <div class="segment-toolbar">
+            <button type="button" class="segment-toolbar-btn" id="exportSegmentsBtn">Export</button>
+            <button type="button" class="segment-toolbar-btn" id="importSegmentsBtn">Import</button>
+            <input type="file" id="importFileInput" accept=".json" hidden />
           </div>
           <div class="segment-list" id="segmentList"></div>
+          <button type="button" class="add-segment-btn" id="addSegmentBottomBtn">+ Add Segment</button>
         </div>
         <div class="control-buttons">
           <div class="buttons-row">
@@ -812,11 +845,14 @@
       const stopBtn = document.getElementById('stopBtn')
       const frameCount = document.getElementById('frameCount')
       const segmentList = document.getElementById('segmentList')
-      const addSegmentBtn = document.getElementById('addSegmentBtn')
       const timelineSection = document.getElementById('timelineSection')
       const timelineSegments = document.getElementById('timelineSegments')
       const timelineStartLabel = document.getElementById('timelineStartLabel')
       const timelineEndLabel = document.getElementById('timelineEndLabel')
+      const exportSegmentsBtn = document.getElementById('exportSegmentsBtn')
+      const importSegmentsBtn = document.getElementById('importSegmentsBtn')
+      const importFileInput = document.getElementById('importFileInput')
+      const addSegmentBottomBtn = document.getElementById('addSegmentBottomBtn')
 
       // Drag and drop
       uploadSection.addEventListener('dragover', e => {
@@ -957,6 +993,7 @@
         cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
         renderSegmentsUI()
         renderTimeline()
+        videoElement.scrollIntoView({ block: 'end' })
       }
 
       function removeCutPoint(index) {
@@ -984,6 +1021,7 @@
         })
         renderSegmentsUI()
         renderTimeline()
+        videoElement.scrollIntoView({ block: 'end' })
       }
 
       function removeExplicitSegment(id) {
@@ -1320,6 +1358,65 @@
         renderTimeline()
       }
 
+      // Export segments as a downloadable JSON file
+      function exportSegments() {
+        readCutPointsFromUI()
+        readExplicitSegmentsFromUI()
+        const data = {
+          version: 1,
+          segmentMode: segmentMode,
+        }
+        if (segmentMode === 'points') {
+          data.cutPoints = cutPoints
+          data.explicitSegments = []
+        } else {
+          data.cutPoints = []
+          data.explicitSegments = explicitSegments.map(s => ({ start: s.start, end: s.end }))
+        }
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = videoFileName ? `${videoFileName}_segments.json` : 'segments.json'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+
+      // Import segments from a JSON file
+      function importSegments(file) {
+        const reader = new FileReader()
+        reader.onload = e => {
+          try {
+            const data = JSON.parse(e.target.result)
+            if (!data.version || !data.segmentMode) {
+              showError('Invalid segment file format')
+              return
+            }
+            segmentMode = data.segmentMode
+            cutPoints = data.cutPoints || []
+            explicitSegments = (data.explicitSegments || []).map(s => ({
+              id: ++segmentIdCounter,
+              start: s.start,
+              end: s.end,
+            }))
+            // Sync mode toggle UI
+            document.querySelectorAll('.segment-mode-toggle label').forEach(l => l.classList.remove('active'))
+            const label = document.querySelector(`.segment-mode-toggle label[data-mode="${segmentMode}"]`)
+            if (label) {
+              label.classList.add('active')
+              label.querySelector('input').checked = true
+            }
+            renderSegmentsUI()
+            renderTimeline()
+          } catch (err) {
+            showError('Error importing segments: ' + err.message)
+          }
+        }
+        reader.readAsText(file)
+      }
+
       function handleVideoFile(file) {
         videoFile = file
         // Store original filename without extension
@@ -1327,7 +1424,7 @@
         const lastDot = fileName.lastIndexOf('.')
         videoFileName = lastDot > 0 ? fileName.substring(0, lastDot) : fileName
         // Sanitize filename (remove special characters, keep only alphanumeric, dash, underscore)
-        videoFileName = videoFileName.replace(/[^a-zA-Z0-9_-]/g, '_')
+        videoFileName = videoFileName.replace(/[/\\?%*:|"<>]/g, '_')
 
         const url = URL.createObjectURL(file)
         video.src = url
@@ -1880,11 +1977,28 @@
       })
 
       // Add new segment or cut point depending on current mode
-      addSegmentBtn.addEventListener('click', () => {
+      function handleAddSegment() {
         if (segmentMode === 'points') {
           addCutPoint()
         } else {
           addExplicitSegment()
+        }
+      }
+
+      addSegmentBottomBtn.addEventListener('click', handleAddSegment)
+
+      // Export segments to JSON file
+      exportSegmentsBtn.addEventListener('click', exportSegments)
+
+      // Import segments from JSON file
+      importSegmentsBtn.addEventListener('click', () => {
+        importFileInput.click()
+      })
+
+      importFileInput.addEventListener('change', e => {
+        if (e.target.files.length > 0) {
+          importSegments(e.target.files[0])
+          e.target.value = '' // allow re-importing the same file
         }
       })
     </script>
