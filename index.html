@@ -907,6 +907,7 @@
       let extractedFrames = []
       let videoElement = null
       let shouldStopExtraction = false
+      let shouldStopAnalysis = false
       let frameIdCounter = 0
       let segmentMode = 'points'
       let cutPoints = []
@@ -1477,6 +1478,8 @@
               lastTime = t
             }
 
+            if (shouldStopAnalysis) break
+
             videoElement.currentTime = t
             await new Promise(resolve => {
               const handler = () => {
@@ -1528,11 +1531,14 @@
         }
 
         sceneChartLoading.classList.add('hidden')
+        analyzeScenesBtn.disabled = false
+        analyzeScenesBtn.textContent = '📊 Analyze Scenes'
         if (sceneDeltas.length > 0) {
           renderTimeline()
         } else {
           analyzeScenesBtn.classList.remove('hidden')
         }
+        shouldStopAnalysis = false
         isAnalyzing = false
       }
 
@@ -1804,8 +1810,11 @@
         // Reset scene chart for new video
         sceneDeltas = []
         isAnalyzing = false
+        shouldStopAnalysis = false
         chartView = { start: 0, end: 0 }
         sceneChartLoading.classList.add('hidden')
+        analyzeScenesBtn.disabled = false
+        analyzeScenesBtn.textContent = '📊 Analyze Scenes'
         analyzeScenesBtn.classList.remove('hidden')
         sceneChartCanvas.width = sceneChartCanvas.width
 
@@ -2532,8 +2541,16 @@
         renderTimeline()
       })
 
-      // Analyze scenes button
-      analyzeScenesBtn.addEventListener('click', analyzeSceneChanges)
+      // Analyze scenes button — toggles between analyze and stop
+      analyzeScenesBtn.addEventListener('click', () => {
+        if (isAnalyzing) {
+          shouldStopAnalysis = true
+          analyzeScenesBtn.textContent = '⏹ Stopping...'
+          analyzeScenesBtn.disabled = true
+        } else {
+          analyzeSceneChanges()
+        }
+      })
 
       // Re-render scene chart on window resize
       window.addEventListener('resize', () => renderSceneChart())
