@@ -1440,9 +1440,11 @@
 
       // Analyze scene changes by computing pixel delta between sampled frames
       function getAnalysisInterval(duration) {
-        if (duration <= 120) return 0.5
-        if (duration <= 600) return 1
-        return 2
+        // Target ~1000 samples total, clamped to [0.2, 1] seconds
+        const target = duration / 1000
+        if (target <= 0.2) return 0.2
+        if (target >= 1) return 1
+        return target
       }
 
       async function analyzeSceneChanges() {
@@ -1451,6 +1453,11 @@
         isAnalyzing = true
         sceneDeltas = []
         sceneChartCanvas.width = sceneChartCanvas.width
+
+        // Pause video during analysis to avoid decoder contention
+        const wasPlaying = !videoElement.paused
+        const savedTime = videoElement.currentTime
+        videoElement.pause()
 
         const duration = videoElement.duration
         const interval = getAnalysisInterval(duration)
@@ -1471,6 +1478,8 @@
         try {
           // Sample the video at regular intervals
           let lastTime = 0
+          let lastProgressRender = performance.now()
+          let progressRendered = false
           for (let t = 0; t < duration; t += interval) {
             // Yield to let UI update
             if (t - lastTime >= 10) {
@@ -1480,16 +1489,15 @@
 
             if (shouldStopAnalysis) break
 
-            videoElement.currentTime = t
-            await new Promise(resolve => {
-              const handler = () => {
-                videoElement.removeEventListener('seeked', handler)
-                resolve()
-              }
-              videoElement.addEventListener('seeked', handler)
-              // Fallback if seek is instant
-              setTimeout(resolve, 100)
-            })
+            // Only wait for seeked if actually seeking to a different time
+            if (videoElement.currentTime !== t) {
+              await new Promise(resolve => {
+                videoElement.addEventListener('seeked', resolve, { once: true })
+                videoElement.currentTime = t
+              })
+            }
+            // Sync with paint cycle to ensure frame is decoded
+            await new Promise(r => requestAnimationFrame(r))
 
             ctx.drawImage(videoElement, 0, 0, w, h)
             const imageData = ctx.getImageData(0, 0, w, h)
@@ -1511,10 +1519,30 @@
             }
 
             prevData = new Uint8Array(pixels)
+
+            // Progressive render every 2s during long analysis
+            if (samples.length >= 2) {
+              const now = performance.now()
+              if (now - lastProgressRender >= 2000) {
+                let curMax = 0
+                for (const s of samples) if (s.delta > curMax) curMax = s.delta
+                sceneDeltas = samples.map(s => ({
+                  time: s.time,
+                  delta: curMax > 0 ? s.delta / curMax : 0,
+                }))
+                if (!progressRendered) {
+                  progressRendered = true
+                  resetChartView()
+                  sceneChartSection.classList.remove('hidden')
+                }
+                renderSceneChart()
+                lastProgressRender = now
+              }
+            }
           }
 
-          // Restore video to start
-          videoElement.currentTime = 0
+          // Restore video position (don't seek to 0 — keep user's place)
+          videoElement.currentTime = savedTime
 
           // Normalize deltas to 0-1 relative to max
           let maxDelta = 0
@@ -1528,6 +1556,7 @@
           resetChartView()
         } catch (e) {
           console.warn('Scene analysis failed:', e)
+          videoElement.currentTime = savedTime
         }
 
         sceneChartLoading.classList.add('hidden')
@@ -1540,6 +1569,8 @@
         }
         shouldStopAnalysis = false
         isAnalyzing = false
+        // Resume playback if it was playing before analysis
+        if (wasPlaying) videoElement.play()
       }
 
       function getViewRange() {
