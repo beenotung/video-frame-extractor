@@ -652,7 +652,7 @@
       #sceneChartCanvas {
         display: block;
         width: 100%;
-        height: 50px;
+        height: 120px;
       }
 
       .timeline-section {
@@ -853,7 +853,7 @@
       <div class="scene-chart-section hidden" id="sceneChartSection">
         <button class="scene-chart-btn" id="analyzeScenesBtn">📊 Analyze Scenes</button>
         <div class="scene-chart-loading hidden" id="sceneChartLoading">Analyzing scenes...</div>
-        <canvas id="sceneChartCanvas" height="50"></canvas>
+        <canvas id="sceneChartCanvas" height="120" style="cursor:pointer"></canvas>
       </div>
 
       <div class="timeline-section hidden" id="timelineSection">
@@ -920,6 +920,7 @@
       let segmentIdCounter = 0
       let sceneDeltas = [] // { time, delta } array, delta normalized 0-1
       let isAnalyzing = false
+      let chartView = { start: 0, end: 0 } // visible range; 0=fit all
 
       const uploadSection = document.getElementById('uploadSection')
       const videoInput = document.getElementById('videoInput')
@@ -1437,7 +1438,8 @@
       // Update timeline playhead position based on current video time
       function updateTimelinePlayhead() {
         if (!videoElement || videoElement.duration <= 0) return
-        const pct = (videoElement.currentTime / videoElement.duration) * 100
+        const view = getViewRange()
+        const pct = ((videoElement.currentTime - view.start) / (view.end - view.start)) * 100
         timelinePlayhead.style.left = pct + '%'
         timelinePlayhead.style.display = 'block'
         renderSceneChart()
@@ -1528,17 +1530,26 @@
             time: s.time,
             delta: maxDelta > 0 ? s.delta / maxDelta : 0,
           }))
+          resetChartView()
         } catch (e) {
           console.warn('Scene analysis failed:', e)
         }
 
         sceneChartLoading.classList.add('hidden')
         if (sceneDeltas.length > 0) {
-          renderSceneChart()
+          renderTimeline()
         } else {
           analyzeScenesBtn.classList.remove('hidden')
         }
         isAnalyzing = false
+      }
+
+      function getViewRange() {
+        const duration = videoElement ? videoElement.duration : 0
+        if (chartView.end > 0 && duration > 0) {
+          return { start: chartView.start, end: chartView.end }
+        }
+        return { start: 0, end: duration }
       }
 
       function renderSceneChart() {
@@ -1563,14 +1574,18 @@
 
         if (sceneDeltas.length < 2) return
 
-        const duration = videoElement ? videoElement.duration : sceneDeltas[sceneDeltas.length - 1].time
-        const xScale = w / duration
+        const view = getViewRange()
+        const viewDuration = view.end - view.start
+        if (viewDuration <= 0) return
+        const xScale = w / viewDuration
 
-        // Draw filled area
+        // Draw filled area (only visible samples)
         ctx.beginPath()
         ctx.moveTo(0, chartBottom)
         for (const s of sceneDeltas) {
-          const x = s.time * xScale
+          if (s.time < view.start) continue
+          if (s.time > view.end) break
+          const x = (s.time - view.start) * xScale
           const y = chartBottom - s.delta * chartHeight
           ctx.lineTo(x, y)
         }
@@ -1581,10 +1596,13 @@
 
         // Draw line
         ctx.beginPath()
-        for (let i = 0; i < sceneDeltas.length; i++) {
-          const x = sceneDeltas[i].time * xScale
-          const y = chartBottom - sceneDeltas[i].delta * chartHeight
-          if (i === 0) ctx.moveTo(x, y)
+        let first = true
+        for (const s of sceneDeltas) {
+          if (s.time < view.start) continue
+          if (s.time > view.end) break
+          const x = (s.time - view.start) * xScale
+          const y = chartBottom - s.delta * chartHeight
+          if (first) { ctx.moveTo(x, y); first = false }
           else ctx.lineTo(x, y)
         }
         ctx.strokeStyle = '#667eea'
@@ -1594,8 +1612,9 @@
         // Draw segment boundaries as vertical lines
         const segs = getSegments()
         for (const seg of segs) {
-          const x1 = seg.start * xScale
-          const x2 = seg.end * xScale
+          if (seg.end < view.start || seg.start > view.end) continue
+          const x1 = Math.max(0, (Math.max(seg.start, view.start) - view.start) * xScale)
+          const x2 = Math.min(w, (Math.min(seg.end, view.end) - view.start) * xScale)
           ctx.strokeStyle = 'rgba(0,0,0,0.3)'
           ctx.lineWidth = 1
           ctx.setLineDash([3, 3])
@@ -1612,14 +1631,25 @@
 
         // Draw playhead
         if (videoElement && videoElement.duration > 0) {
-          const playheadX = (videoElement.currentTime / videoElement.duration) * w
-          ctx.strokeStyle = '#ff4444'
-          ctx.lineWidth = 2
-          ctx.setLineDash([])
-          ctx.beginPath()
-          ctx.moveTo(playheadX, chartTop)
-          ctx.lineTo(playheadX, chartBottom)
-          ctx.stroke()
+          const playheadX = (videoElement.currentTime - view.start) * xScale
+          if (playheadX >= 0 && playheadX <= w) {
+            ctx.strokeStyle = '#ff4444'
+            ctx.lineWidth = 2
+            ctx.setLineDash([])
+            ctx.beginPath()
+            ctx.moveTo(playheadX, chartTop)
+            ctx.lineTo(playheadX, chartBottom)
+            ctx.stroke()
+          }
+        }
+      }
+
+      function resetChartView() {
+        const duration = videoElement ? videoElement.duration : 0
+        if (duration > 0) {
+          chartView = { start: 0, end: duration }
+        } else {
+          chartView = { start: 0, end: 0 }
         }
       }
 
@@ -1654,16 +1684,19 @@
         timelinePlayhead.style.display = 'block'
         timelineSegments.innerHTML = ''
 
-        timelineStartLabel.textContent = formatTime(0)
-        timelineEndLabel.textContent = formatTime(duration)
+        const view = getViewRange()
+        const viewDuration = view.end - view.start
+
+        timelineStartLabel.textContent = formatTime(view.start)
+        timelineEndLabel.textContent = formatTime(view.end)
 
         segs.forEach((seg, index) => {
-          const clampedStart = Math.max(0, seg.start)
-          const clampedEnd = Math.min(duration, seg.end)
-          if (clampedEnd <= clampedStart) return
+          const segStart = Math.max(seg.start, view.start)
+          const segEnd = Math.min(seg.end, view.end)
+          if (segEnd <= segStart) return
 
-          const leftPercent = (clampedStart / duration) * 100
-          const widthPercent = ((clampedEnd - clampedStart) / duration) * 100
+          const leftPercent = ((segStart - view.start) / viewDuration) * 100
+          const widthPercent = ((segEnd - segStart) / viewDuration) * 100
           const color = getSegmentColor(index)
 
           const el = document.createElement('div')
@@ -1672,7 +1705,8 @@
           el.style.width = widthPercent + '%'
           el.style.background = color.fill
           el.style.borderColor = color.border
-          el.title = `Segment ${index + 1}: ${formatTime(clampedStart)} - ${formatTime(clampedEnd)}`
+
+          el.title = `Segment ${index + 1}: ${formatTime(seg.start)} - ${formatTime(seg.end)}`
 
           const label = document.createElement('span')
           label.className = 'timeline-segment-label'
@@ -1682,10 +1716,10 @@
           el.addEventListener('click', e => {
             e.stopPropagation()
             if (videoElement) {
-              videoElement.currentTime = clampedStart
+              videoElement.currentTime = seg.start
               videoElement.play()
               const handler = () => {
-                if (videoElement.currentTime >= clampedEnd) {
+                if (videoElement.currentTime >= seg.end) {
                   videoElement.pause()
                   videoElement.removeEventListener('timeupdate', handler)
                 }
@@ -1778,6 +1812,7 @@
         // Reset scene chart for new video
         sceneDeltas = []
         isAnalyzing = false
+        chartView = { start: 0, end: 0 }
         sceneChartLoading.classList.add('hidden')
         analyzeScenesBtn.classList.remove('hidden')
         sceneChartCanvas.width = sceneChartCanvas.width
@@ -2415,23 +2450,94 @@
         }
       })
 
-      // Click on empty area of timeline bar to seek
+      // Click on timeline empty area to seek
       timelineBarContainer.addEventListener('click', e => {
         if (e.target.closest('.timeline-segment')) return
         const rect = timelineBarContainer.getBoundingClientRect()
         const pct = (e.clientX - rect.left) / rect.width
         if (videoElement) {
-          videoElement.currentTime = pct * videoElement.duration
+          const view = getViewRange()
+          videoElement.currentTime = view.start + pct * (view.end - view.start)
         }
       })
 
-      // Click on scene chart to seek
-      sceneChartCanvas.addEventListener('click', e => {
+      // Drag on chart to seek: mousedown seeks+pauses, drag keeps seeking, mouseup resumes if was playing
+      let chartWasPlaying = false
+      let isDraggingChart = false
+
+      sceneChartCanvas.addEventListener('mousedown', e => {
+        isDraggingChart = true
+        if (!videoElement) return
+        chartWasPlaying = !videoElement.paused
+        videoElement.pause()
         const rect = sceneChartCanvas.getBoundingClientRect()
-        const pct = (e.clientX - rect.left) / rect.width
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+        const view = getViewRange()
+        videoElement.currentTime = view.start + pct * (view.end - view.start)
+      })
+
+      document.addEventListener('mousemove', e => {
+        if (!isDraggingChart || e.buttons !== 1) return
+        const rect = sceneChartCanvas.getBoundingClientRect()
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
         if (videoElement) {
-          videoElement.currentTime = pct * videoElement.duration
+          const view = getViewRange()
+          videoElement.currentTime = view.start + pct * (view.end - view.start)
         }
+      })
+
+      document.addEventListener('mouseup', e => {
+        if (!isDraggingChart) return
+        isDraggingChart = false
+        if (chartWasPlaying && videoElement) {
+          videoElement.play()
+        }
+        chartWasPlaying = false
+      })
+
+      // Wheel: zoom on chart+timeline, Shift+Wheel: horizontal pan
+      sceneChartCanvas.addEventListener('wheel', e => {
+        e.preventDefault()
+        if (!videoElement || videoElement.duration <= 0) return
+        const rect = sceneChartCanvas.getBoundingClientRect()
+        const cursorX = e.clientX - rect.left
+        const duration = videoElement.duration
+
+        if (e.shiftKey) {
+          // Horizontal pan
+          const viewDuration = chartView.end - chartView.start
+          const panAmount = (e.deltaY * viewDuration) / rect.width
+          chartView.start += panAmount
+          chartView.end += panAmount
+        } else {
+          // Zoom centered on cursor
+          const cursorTime = chartView.start + (cursorX / rect.width) * (chartView.end - chartView.start)
+          const currentWidth = chartView.end - chartView.start
+          const factor = e.deltaY > 0 ? 1.25 : 1 / 1.25
+          const newWidth = currentWidth * factor
+          const cursorRatio = cursorX / rect.width
+          chartView.start = cursorTime - cursorRatio * newWidth
+          chartView.end = chartView.start + newWidth
+        }
+
+        // Clamp to video duration
+        if (chartView.start < 0) {
+          chartView.end -= chartView.start
+          chartView.start = 0
+        }
+        if (chartView.end > duration) {
+          chartView.start -= (chartView.end - duration)
+          chartView.end = duration
+        }
+        if (chartView.start < 0) chartView.start = 0
+
+        renderTimeline()
+      }, { passive: false })
+
+      // Double-click on chart to reset zoom
+      sceneChartCanvas.addEventListener('dblclick', e => {
+        resetChartView()
+        renderTimeline()
       })
 
       // Analyze scenes button
