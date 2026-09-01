@@ -650,10 +650,37 @@
         padding: 10px 0;
       }
 
-      #sceneChartCanvas {
+      #sceneChartCanvas,
+      #sceneChartHistCanvas,
+      #sceneChartUnionCanvas {
         display: block;
         width: 100%;
         height: 120px;
+      }
+
+      .scene-chart-label {
+        font-size: 11px;
+        color: #555;
+        font-weight: 600;
+        margin: 8px 0 4px 0;
+      }
+
+      .sensitivity-ctl {
+        font-weight: 400;
+        margin-left: 10px;
+        white-space: nowrap;
+      }
+
+      .sensitivity-link {
+        color: #d33;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      #sensitivitySlider {
+        vertical-align: middle;
+        width: 110px;
       }
 
       .timeline-section {
@@ -848,7 +875,26 @@
       <div class="scene-chart-section hidden" id="sceneChartSection">
         <button class="scene-chart-btn" id="analyzeScenesBtn">📊 Analyze Scenes</button>
         <div class="scene-chart-loading hidden" id="sceneChartLoading">Analyzing scenes...</div>
+        <div class="scene-chart-label">
+          RGB pixel delta (mean)
+          <label class="sensitivity-ctl">
+            Threshold <a href="javascript:void(0)" class="sensitivity-link" id="pixelThresholdLink" title="Drag to adjust the detection threshold">0.50</a>
+            <input type="range" id="pixelThresholdSlider" min="5" max="95" step="5" value="50" class="hidden">
+          </label>
+        </div>
         <canvas id="sceneChartCanvas" height="120" style="cursor:pointer"></canvas>
+        <div class="scene-chart-label">
+          HSV histogram distance (1 − correlation)
+          <label class="sensitivity-ctl">
+            Threshold <a href="javascript:void(0)" class="sensitivity-link" id="histThresholdLink" title="Drag to adjust the detection threshold">0.40</a>
+            <input type="range" id="histThresholdSlider" min="5" max="95" step="5" value="40" class="hidden">
+          </label>
+        </div>
+        <canvas id="sceneChartHistCanvas" height="120" style="cursor:pointer"></canvas>
+        <div class="scene-chart-label">Union — candidate cuts from either signal (▲ pixel · ▲ histogram · ◆ both)
+          <button type="button" class="scene-chart-btn" id="applyCandidatesBtn" title="Add all candidate cuts as cut points (merging with existing ones)">✂️ Add Candidate Segments</button>
+        </div>
+        <canvas id="sceneChartUnionCanvas" height="120" style="cursor:pointer"></canvas>
       </div>
 
       <div class="timeline-section hidden" id="timelineSection">
@@ -915,6 +961,8 @@
       let explicitSegments = []
       let segmentIdCounter = 0
       let sceneDeltas = [] // { time, delta } array, delta normalized 0-1
+      let sceneDeltasHist = [] // HSV histogram distance per sample, normalized 0-1
+      let sceneDeltasUnion = [] // max(pixel, histogram) per sample, normalized 0-1
       let isAnalyzing = false
       let chartView = { start: 0, end: 0 } // visible range; 0=fit all
 
@@ -946,8 +994,49 @@
       const timelinePlayhead = document.getElementById('timelinePlayhead')
       const sceneChartSection = document.getElementById('sceneChartSection')
       const sceneChartCanvas = document.getElementById('sceneChartCanvas')
+      const sceneChartHistCanvas = document.getElementById('sceneChartHistCanvas')
+      const sceneChartUnionCanvas = document.getElementById('sceneChartUnionCanvas')
+      const pixelThresholdLink = document.getElementById('pixelThresholdLink')
+      const pixelThresholdSlider = document.getElementById('pixelThresholdSlider')
+      const histThresholdLink = document.getElementById('histThresholdLink')
+      const histThresholdSlider = document.getElementById('histThresholdSlider')
+
+      // Detection thresholds (0-1), adjustable per chart via the red link/slider.
+      // Persisted to localStorage so your tuning survives page reloads.
+      const THRESHOLD_STORE_KEY = 'vfe_thresholds'
+      function loadStoredThresholds() {
+        try {
+          const raw = localStorage.getItem(THRESHOLD_STORE_KEY)
+          if (!raw) return
+          const saved = JSON.parse(raw)
+          if (typeof saved.pixel === 'number') {
+            pixelThresholdSlider.value = String(Math.round(saved.pixel * 100))
+            pixelThresholdLink.textContent = saved.pixel.toFixed(2)
+          }
+          if (typeof saved.hist === 'number') {
+            histThresholdSlider.value = String(Math.round(saved.hist * 100))
+            histThresholdLink.textContent = saved.hist.toFixed(2)
+          }
+        } catch (e) { /* corrupted storage — keep defaults */ }
+      }
+      function storeThresholds() {
+        try {
+          localStorage.setItem(THRESHOLD_STORE_KEY, JSON.stringify({
+            pixel: pixelThreshold(),
+            hist: histThreshold(),
+          }))
+        } catch (e) { /* storage unavailable (private mode) — ignore */ }
+      }
+      function pixelThreshold() {
+        return (Number(pixelThresholdSlider.value) || 50) / 100
+      }
+      function histThreshold() {
+        return (Number(histThresholdSlider.value) || 40) / 100
+      }
+      loadStoredThresholds()
       const sceneChartLoading = document.getElementById('sceneChartLoading')
       const analyzeScenesBtn = document.getElementById('analyzeScenesBtn')
+      const applyCandidatesBtn = document.getElementById('applyCandidatesBtn')
       const exportSegmentsBtn = document.getElementById('exportSegmentsBtn')
       const importSegmentsBtn = document.getElementById('importSegmentsBtn')
       const importFileInput = document.getElementById('importFileInput')
@@ -1107,6 +1196,44 @@
         renderSegmentsUI()
         renderTimeline()
         scrollByRow(-1)
+      }
+
+      // Add candidate cuts as cut points. Only histogram-supported candidates are
+      // added (◆ both + ▲ histogram-only) — pixel-only (▲ orange) peaks are mostly
+      // motion during footage and fragment the timeline. Histogram distance has a
+      // near-zero noise floor, so its candidates are high-precision.
+      function applyCandidateSegments() {
+        if (!videoElement || videoElement.duration <= 0) return
+        if (sceneDeltas.length === 0 || sceneDeltasHist.length === 0) return
+        const histCands = detectCandidates(sceneDeltasHist, histThreshold(), 1.0)
+        const times = new Set()
+        for (const c of histCands) times.add(c.time)
+        if (times.size === 0) {
+          applyCandidatesBtn.textContent = '✂️ None to add'
+          setTimeout(() => { applyCandidatesBtn.textContent = '✂️ Add Candidate Segments' }, 1500)
+          return
+        }
+        if (segmentMode !== 'points') {
+          switchToPointsMode()
+        }
+        const duration = videoElement.duration
+        const epsilon = 0.3
+        let added = 0
+        for (const t of times) {
+          // Skip candidates at the very start/end or too close to an existing point
+          if (t <= epsilon || t >= duration - epsilon) continue
+          if (cutPoints.some(p => Math.abs(p - t) <= epsilon)) continue
+          cutPoints.push(t)
+          added++
+        }
+        if (added > 0) {
+          cutPoints.sort((a, b) => a - b)
+          cutPoints = cutPoints.filter((t, i) => i === 0 || t !== cutPoints[i - 1])
+          renderSegmentsUI()
+          renderTimeline()
+        }
+        applyCandidatesBtn.textContent = added > 0 ? `✂️ Added ${added}` : '✂️ None to add'
+        setTimeout(() => { applyCandidatesBtn.textContent = '✂️ Add Candidate Segments' }, 1500)
       }
 
       function addExplicitSegment(start, end) {
@@ -1439,6 +1566,53 @@
         renderSceneChart()
       }
 
+      // Build a normalized 2D H-S histogram (H: 30 bins, S: 32 bins) from RGBA pixel data.
+      // Pure-JS equivalent of cv2.calcHist([hsv],[0,1],None,[30,32],[0,180,0,256]) + normalize.
+      function hsvHistogram(rgba, w, h) {
+        const binsH = 30, binsS = 32
+        const hist = new Float32Array(binsH * binsS)
+        for (let i = 0; i < rgba.length; i += 4) {
+          const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2]
+          const max = Math.max(r, g, b)
+          const min = Math.min(r, g, b)
+          const d = max - min
+          let hue = 0
+          if (d !== 0) {
+            if (max === r) hue = ((g - b) / d) % 6
+            else if (max === g) hue = (b - r) / d + 2
+            else hue = (r - g) / d + 4
+            hue *= 60
+            if (hue < 0) hue += 360
+          }
+          const s = max === 0 ? 0 : d / max
+          const hi = Math.min(binsH - 1, Math.floor(hue / 360 * binsH))
+          const si = Math.min(binsS - 1, Math.floor(s * binsS))
+          hist[hi * binsS + si]++
+        }
+        // L1-normalize
+        let sum = 0
+        for (let i = 0; i < hist.length; i++) sum += hist[i]
+        if (sum > 0) for (let i = 0; i < hist.length; i++) hist[i] /= sum
+        return hist
+      }
+
+      // Pearson correlation between two histograms (matches cv2.HISTCMP_CORREL)
+      function histCorrelation(a, b) {
+        const n = a.length
+        let ma = 0, mb = 0
+        for (let i = 0; i < n; i++) { ma += a[i]; mb += b[i] }
+        ma /= n; mb /= n
+        let num = 0, da = 0, dbv = 0
+        for (let i = 0; i < n; i++) {
+          const x = a[i] - ma, y = b[i] - mb
+          num += x * y
+          da += x * x
+          dbv += y * y
+        }
+        const denom = Math.sqrt(da * dbv)
+        return denom > 0 ? num / denom : 1
+      }
+
       // Analyze scene changes by computing pixel delta between sampled frames
       function getAnalysisInterval(duration) {
         // Target ~1000 samples total, clamped to [0.2, 1] seconds
@@ -1453,7 +1627,11 @@
         if (isAnalyzing) return
         isAnalyzing = true
         sceneDeltas = []
+        sceneDeltasHist = []
+        sceneDeltasUnion = []
         sceneChartCanvas.width = sceneChartCanvas.width
+        sceneChartHistCanvas.width = sceneChartHistCanvas.width
+        sceneChartUnionCanvas.width = sceneChartUnionCanvas.width
 
         // Pause video during analysis to avoid decoder contention
         const wasPlaying = !videoElement.paused
@@ -1472,6 +1650,8 @@
         offscreen.height = h
         const ctx = offscreen.getContext('2d')
         let prevData = null
+        let prevHist = null
+        const histSamples = []
 
         analyzeScenesBtn.classList.add('hidden')
         sceneChartLoading.classList.remove('hidden')
@@ -1519,18 +1699,22 @@
               samples.push({ time: t, delta: 0 })
             }
 
+            // HSV histogram distance vs previous sample (color distribution change)
+            const hist = hsvHistogram(pixels, w, h)
+            if (prevHist) {
+              histSamples.push({ time: t, dist: 1 - histCorrelation(hist, prevHist) })
+            } else {
+              histSamples.push({ time: t, dist: 0 })
+            }
+            prevHist = hist
+
             prevData = new Uint8Array(pixels)
 
             // Progressive render every 2s during long analysis
             if (samples.length >= 2) {
               const now = performance.now()
               if (now - lastProgressRender >= 2000) {
-                let curMax = 0
-                for (const s of samples) if (s.delta > curMax) curMax = s.delta
-                sceneDeltas = samples.map(s => ({
-                  time: s.time,
-                  delta: curMax > 0 ? s.delta / curMax : 0,
-                }))
+                applyDeltas(samples, histSamples)
                 if (!progressRendered) {
                   progressRendered = true
                   resetChartView()
@@ -1545,15 +1729,7 @@
           // Restore video position (don't seek to 0 — keep user's place)
           videoElement.currentTime = savedTime
 
-          // Normalize deltas to 0-1 relative to max
-          let maxDelta = 0
-          for (const s of samples) {
-            if (s.delta > maxDelta) maxDelta = s.delta
-          }
-          sceneDeltas = samples.map(s => ({
-            time: s.time,
-            delta: maxDelta > 0 ? s.delta / maxDelta : 0,
-          }))
+          applyDeltas(samples, histSamples)
           resetChartView()
         } catch (e) {
           console.warn('Scene analysis failed:', e)
@@ -1574,6 +1750,38 @@
         if (wasPlaying) videoElement.play()
       }
 
+      // Normalize series (RGB pixel delta + HSV histogram distance + their union)
+      // to 0-1 relative to own max. Union = max of the two raw signals at each time,
+      // so a candidate cut stands out if EITHER signal spikes.
+      function applyDeltas(samples, histSamples) {
+        let maxDelta = 0
+        for (const s of samples) if (s.delta > maxDelta) maxDelta = s.delta
+        sceneDeltas = samples.map(s => ({
+          time: s.time,
+          delta: maxDelta > 0 ? s.delta / maxDelta : 0,
+        }))
+        let maxDist = 0
+        for (const s of histSamples) if (s.dist > maxDist) maxDist = s.dist
+        sceneDeltasHist = histSamples.map(s => ({
+          time: s.time,
+          delta: maxDist > 0 ? s.dist / maxDist : 0,
+        }))
+        // Union: raw pixel delta and raw histogram distance, each scaled to 0-1
+        // first, then take the max per sample.
+        const byTime = new Map()
+        for (const s of sceneDeltas) byTime.set(s.time, s.delta)
+        let maxUnion = 0
+        const unions = histSamples.map(s => {
+          const p = byTime.get(s.time) || 0
+          const u = Math.max(p, s.delta)
+          if (u > maxUnion) maxUnion = u
+          return { time: s.time, delta: u }
+        })
+        sceneDeltasUnion = maxUnion > 0
+          ? unions.map(s => ({ time: s.time, delta: s.delta / maxUnion }))
+          : unions
+      }
+
       function getViewRange() {
         const duration = videoElement ? videoElement.duration : 0
         if (chartView.end > 0 && duration > 0) {
@@ -1583,9 +1791,152 @@
       }
 
       function renderSceneChart() {
-        if (sceneDeltas.length === 0) return
+        drawSceneChartOn(sceneChartCanvas, sceneDeltas)
+        drawSceneChartOn(sceneChartHistCanvas, sceneDeltasHist)
+        drawUnionChart()
+      }
+
+      // Detect candidate cuts in a normalized 0-1 series: local maxima above a
+      // relative threshold, with a min gap between consecutive candidates.
+      function detectCandidates(series, threshold, minGapSec) {
+        const cands = []
+        for (let i = 1; i < series.length - 1; i++) {
+          const s = series[i]
+          if (s.delta < threshold) continue
+          if (s.delta < series[i - 1].delta || s.delta < series[i + 1].delta) continue
+          const last = cands[cands.length - 1]
+          if (last && s.time - last.time < minGapSec) {
+            if (s.delta > last.delta) last.delta = s.delta // keep the stronger peak
+            continue
+          }
+          cands.push({ time: s.time, delta: s.delta })
+        }
+        return cands
+      }
+
+      function drawUnionChart() {
+        const canvas = sceneChartUnionCanvas
+        if (sceneDeltas.length === 0 || sceneDeltasHist.length === 0) return
         if (sceneChartSection.classList.contains('hidden')) return
-        const canvas = sceneChartCanvas
+
+        // Candidate cuts per signal (peaks above per-chart thresholds)
+        const pixelCands = detectCandidates(sceneDeltas, pixelThreshold(), 1.0)
+        const histCands = detectCandidates(sceneDeltasHist, histThreshold(), 1.0)
+        // Merge: a time covered by both sources becomes a "both" marker
+        const both = [], pixelOnly = [], histOnly = []
+        const used = new Set()
+        for (const hc of histCands) {
+          const match = pixelCands.find(pc => Math.abs(pc.time - hc.time) <= 0.6 && !used.has(pc))
+          if (match) { used.add(match); both.push({ time: (hc.time + match.time) / 2, delta: Math.max(hc.delta, match.delta) }) }
+          else histOnly.push(hc)
+        }
+        for (const pc of pixelCands) if (!used.has(pc)) pixelOnly.push(pc)
+
+        const rect = canvas.parentElement.getBoundingClientRect()
+        const w = rect.width
+        const h = canvas.height
+        canvas.width = w * devicePixelRatio
+        canvas.height = h * devicePixelRatio
+        const ctx = canvas.getContext('2d')
+        ctx.scale(devicePixelRatio, devicePixelRatio)
+        ctx.clearRect(0, 0, w, h)
+
+        const padding = 2
+        const chartTop = padding
+        const chartBottom = h - padding
+        const chartHeight = chartBottom - chartTop
+        const view = getViewRange()
+        const viewDuration = view.end - view.start
+        if (viewDuration <= 0) return
+        const xScale = w / viewDuration
+        const xOf = t => (t - view.start) * xScale
+
+        // Faint pixel-delta curve as context
+        ctx.beginPath()
+        ctx.moveTo(0, chartBottom)
+        for (const s of sceneDeltas) {
+          if (s.time < view.start) continue
+          if (s.time > view.end) break
+          ctx.lineTo(xOf(s.time), chartBottom - s.delta * chartHeight)
+        }
+        ctx.lineTo(w, chartBottom)
+        ctx.closePath()
+        ctx.fillStyle = 'rgba(102, 126, 234, 0.10)'
+        ctx.fill()
+        ctx.beginPath()
+        let first = true
+        for (const s of sceneDeltas) {
+          if (s.time < view.start) continue
+          if (s.time > view.end) break
+          const x = xOf(s.time)
+          const y = chartBottom - s.delta * chartHeight
+          if (first) { ctx.moveTo(x, y); first = false }
+          else ctx.lineTo(x, y)
+        }
+        ctx.strokeStyle = 'rgba(102, 126, 234, 0.35)'
+        ctx.lineWidth = 1
+        ctx.stroke()
+
+        // Draw union markers: ◆ both (strong), ▲ histogram only, ▲ pixel only
+        const drawMarker = (t, shape, color) => {
+          const x = xOf(t)
+          if (x < -4 || x > w + 4) return
+          ctx.fillStyle = color
+          ctx.beginPath()
+          if (shape === 'diamond') {
+            ctx.moveTo(x, chartTop + 2)
+            ctx.lineTo(x + 5, chartTop + 8)
+            ctx.lineTo(x, chartTop + 14)
+            ctx.lineTo(x - 5, chartTop + 8)
+          } else {
+            ctx.moveTo(x, chartTop + 2)
+            ctx.lineTo(x + 4.5, chartTop + 12)
+            ctx.lineTo(x - 4.5, chartTop + 12)
+          }
+          ctx.closePath()
+          ctx.fill()
+          ctx.strokeStyle = color
+          ctx.setLineDash([2, 3])
+          ctx.beginPath()
+          ctx.moveTo(x, chartTop + 14)
+          ctx.lineTo(x, chartBottom)
+          ctx.stroke()
+          ctx.setLineDash([])
+        }
+        for (const c of both) drawMarker(c.time, 'diamond', '#1a9c48')
+        for (const c of histOnly) drawMarker(c.time, 'triangle', '#7b3ff2')
+        for (const c of pixelOnly) drawMarker(c.time, 'triangle', '#e6862e')
+
+        // Segment boundaries + playhead
+        for (const seg of getSegments()) {
+          if (seg.end < view.start || seg.start > view.end) continue
+          for (const bx of [Math.max(seg.start, view.start), Math.min(seg.end, view.end)]) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+            ctx.lineWidth = 1
+            ctx.setLineDash([3, 3])
+            ctx.beginPath()
+            ctx.moveTo(xOf(bx), chartTop)
+            ctx.lineTo(xOf(bx), chartBottom)
+            ctx.stroke()
+            ctx.setLineDash([])
+          }
+        }
+        if (videoElement && videoElement.duration > 0) {
+          const playheadX = xOf(videoElement.currentTime)
+          if (playheadX >= 0 && playheadX <= w) {
+            ctx.strokeStyle = '#ff4444'
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(playheadX, chartTop)
+            ctx.lineTo(playheadX, chartBottom)
+            ctx.stroke()
+          }
+        }
+      }
+
+      function drawSceneChartOn(canvas, series) {
+        if (series.length === 0) return
+        if (sceneChartSection.classList.contains('hidden')) return
         const rect = canvas.parentElement.getBoundingClientRect()
         const w = rect.width
         const h = canvas.height
@@ -1602,7 +1953,7 @@
         const chartBottom = h - padding
         const chartHeight = chartBottom - chartTop
 
-        if (sceneDeltas.length < 2) return
+        if (series.length < 2) return
 
         const view = getViewRange()
         const viewDuration = view.end - view.start
@@ -1612,7 +1963,7 @@
         // Draw filled area (only visible samples)
         ctx.beginPath()
         ctx.moveTo(0, chartBottom)
-        for (const s of sceneDeltas) {
+        for (const s of series) {
           if (s.time < view.start) continue
           if (s.time > view.end) break
           const x = (s.time - view.start) * xScale
@@ -1627,7 +1978,7 @@
         // Draw line
         ctx.beginPath()
         let first = true
-        for (const s of sceneDeltas) {
+        for (const s of series) {
           if (s.time < view.start) continue
           if (s.time > view.end) break
           const x = (s.time - view.start) * xScale
@@ -1638,6 +1989,24 @@
         ctx.strokeStyle = '#667eea'
         ctx.lineWidth = 1
         ctx.stroke()
+
+        // Threshold guide line (red) at the current sensitivity level
+        if (canvas === sceneChartCanvas || canvas === sceneChartHistCanvas) {
+          const th = canvas === sceneChartCanvas ? pixelThreshold() : histThreshold()
+          const ty = chartBottom - th * chartHeight
+          ctx.strokeStyle = 'rgba(221, 51, 51, 0.75)'
+          ctx.lineWidth = 1
+          ctx.setLineDash([5, 3])
+          ctx.beginPath()
+          ctx.moveTo(0, ty)
+          ctx.lineTo(w, ty)
+          ctx.stroke()
+          ctx.setLineDash([])
+          ctx.fillStyle = 'rgba(221, 51, 51, 0.9)'
+          ctx.font = '10px sans-serif'
+          ctx.textAlign = 'right'
+          ctx.fillText('threshold', w - 4, ty - 3)
+        }
 
         // Draw segment boundaries as vertical lines
         const segs = getSegments()
@@ -1758,10 +2127,102 @@
             }
           })
 
+          // Right-click: merge this segment forward (with the next) or backward
+          // (with the previous) by removing the boundary between them.
+          el.addEventListener('contextmenu', e => {
+            e.preventDefault()
+            e.stopPropagation()
+            showMergeMenu(e.clientX, e.clientY, index)
+          })
+
           timelineSegments.appendChild(el)
         })
 
         renderSceneChart()
+      }
+
+      // Small context menu for merging timeline segments. In points mode a merge
+      // simply removes the shared cut point; in explicit mode the two segments
+      // are replaced by one spanning both.
+      function showMergeMenu(x, y, index) {
+        hideMergeMenu()
+        const segs = getSegments()
+        const menu = document.createElement('div')
+        menu.id = 'mergeMenu'
+        menu.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:4px 0;font-size:12px;min-width:150px;'
+        menu.style.left = x + 'px'
+        menu.style.top = y + 'px'
+        const addItems = () => {
+          if (index > 0) {
+            const back = document.createElement('div')
+            back.textContent = `⬅ Merge backward (with ${index})`
+            back.style.cssText = 'padding:6px 12px;cursor:pointer;'
+            back.addEventListener('mouseenter', () => { back.style.background = '#f0f2ff' })
+            back.addEventListener('mouseleave', () => { back.style.background = '' })
+            back.addEventListener('click', () => { hideMergeMenu(); mergeSegments(index, index - 1) })
+            menu.appendChild(back)
+          }
+          if (index < segs.length - 1) {
+            const fwd = document.createElement('div')
+            fwd.textContent = `➡ Merge forward (with ${index + 2})`
+            fwd.style.cssText = 'padding:6px 12px;cursor:pointer;'
+            fwd.addEventListener('mouseenter', () => { fwd.style.background = '#f0f2ff' })
+            fwd.addEventListener('mouseleave', () => { fwd.style.background = '' })
+            fwd.addEventListener('click', () => { hideMergeMenu(); mergeSegments(index, index + 1) })
+            menu.appendChild(fwd)
+          }
+          if (index === 0 && segs.length === 1) {
+            const none = document.createElement('div')
+            none.textContent = 'No adjacent segment to merge'
+            none.style.cssText = 'padding:6px 12px;color:#999;'
+            menu.appendChild(none)
+          }
+        }
+        addItems()
+        document.body.appendChild(menu)
+        // Keep the menu inside the viewport
+        const box = menu.getBoundingClientRect()
+        if (menu.offsetTop + box.height > window.innerHeight) {
+          menu.style.top = Math.max(4, window.innerHeight - box.height - 4) + 'px'
+        }
+        if (menu.offsetLeft + box.width > window.innerWidth) {
+          menu.style.left = Math.max(4, window.innerWidth - box.width - 4) + 'px'
+        }
+      }
+
+      function hideMergeMenu() {
+        const existing = document.getElementById('mergeMenu')
+        if (existing) existing.remove()
+      }
+
+      document.addEventListener('click', hideMergeMenu)
+      window.addEventListener('blur', hideMergeMenu)
+
+      // Merge segment atIndex into intoIndex (keeping intoIndex's position in the
+      // list order), covering both points and explicit modes.
+      function mergeSegments(atIndex, intoIndex) {
+        if (segmentMode === 'points') {
+          readCutPointsFromUI()
+          // Merging adjacent segments = removing the cut point between them
+          const boundaryIndex = Math.max(atIndex, intoIndex) // shared boundary
+          if (boundaryIndex <= 0 || boundaryIndex >= cutPoints.length - 1) return
+          cutPoints.splice(boundaryIndex, 1)
+          renderSegmentsUI()
+          renderTimeline()
+        } else {
+          readExplicitSegmentsFromUI()
+          const keep = Math.min(atIndex, intoIndex)
+          const drop = Math.max(atIndex, intoIndex)
+          if (drop !== keep + 1) return // only adjacent segments merge
+          const a = explicitSegments[keep]
+          const b = explicitSegments[drop]
+          if (!a || !b) return
+          a.start = Math.min(a.start, b.start)
+          a.end = Math.max(a.end, b.end)
+          explicitSegments = explicitSegments.filter(s => s.id !== b.id)
+          renderSegmentsUI()
+          renderTimeline()
+        }
       }
 
       // Initialize with a single default segment covering the full video
@@ -1841,6 +2302,10 @@
       function setupVideoUI() {
         // Reset scene chart for new video
         sceneDeltas = []
+        sceneDeltasHist = []
+        sceneDeltasUnion = []
+        sceneChartHistCanvas.width = sceneChartHistCanvas.width
+        sceneChartUnionCanvas.width = sceneChartUnionCanvas.width
         isAnalyzing = false
         shouldStopAnalysis = false
         chartView = { start: 0, end: 0 }
@@ -2514,24 +2979,33 @@
       let chartWasPlaying = false
       let isDraggingChart = false
 
-      sceneChartCanvas.addEventListener('mousedown', e => {
-        isDraggingChart = true
-        if (!videoElement) return
-        chartWasPlaying = !videoElement.paused
-        videoElement.pause()
-        const rect = sceneChartCanvas.getBoundingClientRect()
-        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-        const view = getViewRange()
-        videoElement.currentTime = view.start + pct * (view.end - view.start)
-      })
+      // All three charts share the same seek/zoom/pan behavior
+      const sceneChartCanvases = [sceneChartCanvas, sceneChartHistCanvas, sceneChartUnionCanvas]
+      for (const chartCanvas of sceneChartCanvases) {
+        chartCanvas.addEventListener('mousedown', e => {
+          isDraggingChart = true
+          if (!videoElement) return
+          chartWasPlaying = !videoElement.paused
+          videoElement.pause()
+          const rect = chartCanvas.getBoundingClientRect()
+          const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+          const view = getViewRange()
+          videoElement.currentTime = view.start + pct * (view.end - view.start)
+        })
+      }
 
       document.addEventListener('mousemove', e => {
         if (!isDraggingChart || e.buttons !== 1) return
-        const rect = sceneChartCanvas.getBoundingClientRect()
-        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-        if (videoElement) {
-          const view = getViewRange()
-          videoElement.currentTime = view.start + pct * (view.end - view.start)
+        for (const chartCanvas of sceneChartCanvases) {
+          const rect = chartCanvas.getBoundingClientRect()
+          if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+            if (videoElement) {
+              const view = getViewRange()
+              videoElement.currentTime = view.start + pct * (view.end - view.start)
+            }
+            return
+          }
         }
       })
 
@@ -2545,48 +3019,71 @@
       })
 
       // Wheel: zoom on chart+timeline, Shift+Wheel: horizontal pan
-      sceneChartCanvas.addEventListener('wheel', e => {
-        e.preventDefault()
-        if (!videoElement || videoElement.duration <= 0) return
-        const rect = sceneChartCanvas.getBoundingClientRect()
-        const cursorX = e.clientX - rect.left
-        const duration = videoElement.duration
+      for (const chartCanvas of sceneChartCanvases) {
+        chartCanvas.addEventListener('wheel', e => {
+          e.preventDefault()
+          if (!videoElement || videoElement.duration <= 0) return
+          const rect = chartCanvas.getBoundingClientRect()
+          const cursorX = e.clientX - rect.left
+          const duration = videoElement.duration
 
-        if (e.shiftKey) {
-          // Horizontal pan
-          const viewDuration = chartView.end - chartView.start
-          const panAmount = (e.deltaY * viewDuration) / rect.width
-          chartView.start += panAmount
-          chartView.end += panAmount
-        } else {
-          // Zoom centered on cursor
-          const cursorTime = chartView.start + (cursorX / rect.width) * (chartView.end - chartView.start)
-          const currentWidth = chartView.end - chartView.start
-          const factor = e.deltaY > 0 ? 1.25 : 1 / 1.25
-          const newWidth = currentWidth * factor
-          const cursorRatio = cursorX / rect.width
-          chartView.start = cursorTime - cursorRatio * newWidth
-          chartView.end = chartView.start + newWidth
-        }
+          if (e.shiftKey) {
+            // Horizontal pan
+            const viewDuration = chartView.end - chartView.start
+            const panAmount = (e.deltaY * viewDuration) / rect.width
+            chartView.start += panAmount
+            chartView.end += panAmount
+          } else {
+            // Zoom centered on cursor
+            const cursorTime = chartView.start + (cursorX / rect.width) * (chartView.end - chartView.start)
+            const currentWidth = chartView.end - chartView.start
+            const factor = e.deltaY > 0 ? 1.25 : 1 / 1.25
+            const newWidth = currentWidth * factor
+            const cursorRatio = cursorX / rect.width
+            chartView.start = cursorTime - cursorRatio * newWidth
+            chartView.end = chartView.start + newWidth
+          }
 
-        // Clamp to video duration
-        if (chartView.start < 0) {
-          chartView.end -= chartView.start
-          chartView.start = 0
-        }
-        if (chartView.end > duration) {
-          chartView.start -= (chartView.end - duration)
-          chartView.end = duration
-        }
-        if (chartView.start < 0) chartView.start = 0
+          // Clamp to video duration
+          if (chartView.start < 0) {
+            chartView.end -= chartView.start
+            chartView.start = 0
+          }
+          if (chartView.end > duration) {
+            chartView.start -= (chartView.end - duration)
+            chartView.end = duration
+          }
+          if (chartView.start < 0) chartView.start = 0
 
-        renderTimeline()
-      }, { passive: false })
+          renderTimeline()
+        }, { passive: false })
+      }
 
-      // Double-click on chart to reset zoom
-      sceneChartCanvas.addEventListener('dblclick', e => {
-        resetChartView()
-        renderTimeline()
+      // Double-click on any chart to reset zoom
+      for (const chartCanvas of sceneChartCanvases) {
+        chartCanvas.addEventListener('dblclick', e => {
+          resetChartView()
+          renderTimeline()
+        })
+      }
+
+      // Threshold: red link reveals the slider; changing it re-detects instantly
+      // (no re-analysis — the signals are already computed)
+      pixelThresholdLink.addEventListener('click', () => {
+        pixelThresholdSlider.classList.toggle('hidden')
+      })
+      pixelThresholdSlider.addEventListener('input', () => {
+        pixelThresholdLink.textContent = pixelThreshold().toFixed(2)
+        storeThresholds()
+        renderSceneChart()
+      })
+      histThresholdLink.addEventListener('click', () => {
+        histThresholdSlider.classList.toggle('hidden')
+      })
+      histThresholdSlider.addEventListener('input', () => {
+        histThresholdLink.textContent = histThreshold().toFixed(2)
+        storeThresholds()
+        renderSceneChart()
       })
 
       // Analyze scenes button — toggles between analyze and stop
@@ -2599,6 +3096,9 @@
           analyzeSceneChanges()
         }
       })
+
+      // Add candidate cuts as cut points
+      applyCandidatesBtn.addEventListener('click', applyCandidateSegments)
 
       // Re-render scene chart on window resize
       window.addEventListener('resize', () => renderSceneChart())
